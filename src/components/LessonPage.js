@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
+import { useLanguage } from "../context/LanguageContext";
 
 import MCQ from "./MCQ";
 import MatchThePair from "./MatchThePair";
@@ -10,6 +11,7 @@ import BookReader from "./BookReader";
 const LessonPage = () => {
   const { seriesSlug, lessonId } = useParams();
   const { user } = useUser();
+  const { language } = useLanguage();
   const navigate = useNavigate();
 
   const [series, setSeries] = useState(null);
@@ -38,21 +40,19 @@ const LessonPage = () => {
 
   const handleNext = async () => {
     if (currentQIndex + 1 < questions.length) {
-      const newIndex = currentQIndex + 1;
-      setCurrentQIndex(newIndex);
+      setCurrentQIndex(currentQIndex + 1);
 
       await fetch(`http://localhost:3001/api/series/${seriesSlug}/progress/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lessonId,
-          lastCompletedQuestionIndex: newIndex - 1,
+          lastCompletedQuestionIndex: currentQIndex,
           xpChange: 10,
           heartChange: 0,
         }),
       });
     } else {
-      // Lesson completed -> Unlock next lesson
       const [unitNum, lessonNum] = lessonId.replace('lesson-', '').split('-').map(Number);
 
       let globalIndex = 0;
@@ -81,15 +81,23 @@ const LessonPage = () => {
   const renderQuestion = () => {
     const { type } = currentQuestion;
 
+    const translatedQuestion = {
+      ...currentQuestion,
+      question: currentQuestion.question?.[language],
+      options: currentQuestion.options?.[language],
+      correct: currentQuestion.correct?.[language],
+      pages: currentQuestion.pages?.[language],
+    };
+
     switch (type) {
       case "mcq":
-        return <MCQ question={currentQuestion} onNext={handleNext} />;
+        return <MCQ question={translatedQuestion} onNext={handleNext} />;
       case "match-the-pair":
-        return <MatchThePair question={currentQuestion} onNext={handleNext} />;
+        return <MatchThePair question={translatedQuestion} onNext={handleNext} />;
       case "crossword":
-        return <Crossword question={currentQuestion} onNext={handleNext} />;
+        return <Crossword question={translatedQuestion} onNext={handleNext} />;
       case "book":
-        return <BookReader question={currentQuestion} onNext={handleNext} />;
+        return <BookReader pages={translatedQuestion.pages} onNext={handleNext} />;
       default:
         return <div>Unknown Question Type</div>;
     }

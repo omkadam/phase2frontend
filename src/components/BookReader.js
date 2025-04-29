@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
+import { useLanguage } from "../context/LanguageContext";
 
 const BookReader = ({ question, onNext }) => {
   const [currentPage, setCurrentPage] = useState(0);
@@ -8,8 +9,10 @@ const BookReader = ({ question, onNext }) => {
   const navigate = useNavigate();
   const { seriesSlug, lessonId } = useParams();
   const { user } = useUser();
+  const { language } = useLanguage(); // ✅ language context
 
-  const pages = question ? (question.pages || []) : [];
+  // 👉 Pages language-specific
+  const pages = question?.pages?.[language] || [];
 
   const handleNextPage = () => {
     if (currentPage + 1 < pages.length) {

@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
+import { useLanguage } from "../context/LanguageContext";
+import LanguageModal from "./LanguageModal";
 
 const SeriesDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useUser();
+  const { language } = useLanguage();
 
   const [series, setSeries] = useState(null);
   const [unlockedLessons, setUnlockedLessons] = useState([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [xp, setXp] = useState(0);
   const [hearts, setHearts] = useState(5);
+  const [showLangModal, setShowLangModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -33,18 +37,16 @@ const SeriesDetail = () => {
   if (!series) return <div className="p-6 text-center">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-white pt-24 pb-32 px-4 overflow-x-hidden relative">
-      
-      {/* 🧩 Fixed Top Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/learn')} className="text-2xl">
-            ←
-          </button>
+    <div className="min-h-screen bg-white pt-4 pb-32 px-4 overflow-x-hidden relative">
+      {/* 🧩 Top Header: Fixed */}
+      <div className="flex items-center justify-between mb-6 sticky top-0 bg-white py-3 z-50">
+        <div className="flex items-center gap-6">
+          <button onClick={() => navigate('/learn')} className="text-2xl">←</button>
           <img
             src="https://d16ho1g3lqitul.cloudfront.net/india.svg"
             alt="lang"
-            className="w-7 h-7"
+            className="w-7 h-7 cursor-pointer"
+            onClick={() => setShowLangModal(true)}
           />
         </div>
         <div className="flex items-center gap-3 text-sm font-bold">
@@ -53,7 +55,13 @@ const SeriesDetail = () => {
         </div>
       </div>
 
-      {/* Units Loop */}
+      {/* 🚀 Series Title */}
+      {/* <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-[#333]">{series.title?.[language]}</h1>
+        <p className="text-gray-600">{series.subtitle?.[language]}</p>
+      </div> */}
+
+      {/* Units */}
       {series.units.map((unit, unitIndex) => {
         const canAccessUnit = isSubscribed || unitIndex === 0;
 
@@ -62,17 +70,13 @@ const SeriesDetail = () => {
             {/* Unit Banner */}
             <div className="bg-[#009aef] text-white rounded-xl px-6 py-5 flex justify-between items-center shadow-lg mb-6">
               <div>
-                <h2 className="text-xl font-bold">{unit.title}</h2>
-                <p className="text-sm opacity-90">{unit.subtitle}</p>
+                <h2 className="text-xl font-bold">{unit.title?.[language]}</h2>
+                <p className="text-sm opacity-90">{unit.subtitle?.[language]}</p>
               </div>
-              <img
-                src={unit.image}
-                alt="Unit"
-                className="w-14 h-14 rounded-lg object-cover"
-              />
+              <img src={unit.image} alt="Unit" className="w-14 h-14 rounded-lg object-cover" />
             </div>
 
-            {/* Lessons inside Unit */}
+            {/* Lessons */}
             <div className="relative flex flex-col items-center">
               {unit.lessons.map((lesson, lessonIndex) => {
                 const rightShift = Math.sin(lessonIndex * Math.PI / 3) * 50;
@@ -86,16 +90,10 @@ const SeriesDetail = () => {
                 const isUnlocked = unlockedLessons.includes(globalIndex);
 
                 return (
-                  <div
-                    key={lessonIndex}
-                    className="relative flex justify-center w-full"
-                    style={{ marginTop: lessonIndex === 0 ? 0 : 24 }}
-                  >
+                  <div key={lessonIndex} className="relative flex justify-center w-full" style={{ marginTop: lessonIndex === 0 ? 0 : 24 }}>
                     <button
                       disabled={!canAccessUnit || !isUnlocked}
-                      onClick={() =>
-                        navigate(`/lesson/${slug}/lesson-${unitIndex + 1}-${lessonIndex + 1}`)
-                      }
+                      onClick={() => navigate(`/lesson/${slug}/lesson-${unitIndex + 1}-${lessonIndex + 1}`)}
                       className={`w-[70px] h-[70px] rounded-full flex items-center justify-center text-white font-bold text-xl border-4 transition-all shadow-md ${
                         canAccessUnit && isUnlocked
                           ? "bg-yellow-400 border-yellow-500 hover:scale-110"
@@ -109,11 +107,7 @@ const SeriesDetail = () => {
                     {(lessonIndex + 1) % 3 === 0 && (
                       <img
                         src="https://d16ho1g3lqitul.cloudfront.net/sochuloop.gif"
-                        className={`absolute w-[100px] top-[-50px] ${
-                          lessonIndex % 2 === 0
-                            ? "left-1 sm:left-[-80px]"
-                            : "right-1 sm:right-[-80px]"
-                        }`}
+                        className={`absolute w-[100px] top-[-50px] ${lessonIndex % 2 === 0 ? "left-1 sm:left-[-80px]" : "right-1 sm:right-[-80px]"}`}
                         alt="Sochu"
                       />
                     )}
@@ -125,7 +119,7 @@ const SeriesDetail = () => {
         );
       })}
 
-      {/* 🌟 Sexy Subscription Card */}
+      {/* 🌟 Subscription Card */}
       {!isSubscribed && (
         <div className="fixed bottom-4 left-0 right-0 flex justify-center items-center px-6">
           <div className="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 text-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center animate-pulse">
@@ -137,6 +131,8 @@ const SeriesDetail = () => {
           </div>
         </div>
       )}
+
+      {showLangModal && <LanguageModal close={() => setShowLangModal(false)} />}
     </div>
   );
 };

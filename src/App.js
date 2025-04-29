@@ -9,98 +9,106 @@ import LessonPage from "./components/LessonPage";
 import BreathingPage from "./components/BreathingPage";
 import FeelingPage from "./components/FeelingPage";
 import MoodRadarChart from "./components/MoodRadarChart";
+import { LanguageProvider } from "./context/LanguageContext"; // ✅ Import LanguageProvider
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<WelcomeScreen />} />
-      <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
+    <LanguageProvider> {/* ✅ Wrap your complete app */}
+      <Routes>
+        <Route path="/" element={<WelcomeScreen />} />
+        <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
 
-      {/* ✅ Protected Feeling Page */}
-      <Route
-        path="/feeling"
-        element={
-          <>
-            <SignedIn>
-              <FeelingPage />
-            </SignedIn>
-            <SignedOut>
-              <RedirectToSignIn />
-            </SignedOut>
-          </>
-        }
-      />
+        {/* ✅ Protected Feeling Page */}
+        <Route
+          path="/feeling"
+          element={
+            <>
+              <SignedIn>
+                <FeelingPage />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
 
-      {/* Protected Learn Page */}
-      <Route
-        path="/learn"
-        element={
-          <>
-            <SignedIn>
-              <SeriesScreen />
-            </SignedIn>
-            <SignedOut>
-              <RedirectToSignIn />
-            </SignedOut>
-          </>
-        }
-      />
+        {/* Protected Learn Page */}
+        <Route
+          path="/learn"
+          element={
+            <>
+              <SignedIn>
+                <SeriesScreen />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
 
-      {/* Protected Series Detail Page */}
-      <Route
-        path="/learn/:slug"
-        element={
-          <>
-            <SignedIn>
-              <SeriesDetail />
-            </SignedIn>
-            <SignedOut>
-              <RedirectToSignIn />
-            </SignedOut>
-          </>
-        }
-      />
+        {/* Protected Series Detail Page */}
+        <Route
+          path="/learn/:slug"
+          element={
+            <>
+              <SignedIn>
+                <SeriesDetail />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
 
-      {/* Protected Lesson Page */}
-      <Route
-        path="/lesson/:seriesSlug/:lessonId"
-        element={
-          <>
-            <SignedIn>
-              <LessonPage />
-            </SignedIn>
-            <SignedOut>
-              <RedirectToSignIn />
-            </SignedOut>
-          </>
-        }
-      />
+        {/* Protected Lesson Page */}
+        <Route
+          path="/lesson/:seriesSlug/:lessonId"
+          element={
+            <>
+              <SignedIn>
+                <LessonPage />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
 
-      {/* Protected Breathing Page */}
-      <Route
-        path="/breathe"
-        element={
-          <>
-            <SignedIn>
-              <BreathingPage />
-            </SignedIn>
-            <SignedOut>
-              <RedirectToSignIn />
-            </SignedOut>
-          </>
-        }
-      />
+        {/* Protected Breathing Page */}
+        <Route
+          path="/breathe"
+          element={
+            <>
+              <SignedIn>
+                <BreathingPage />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
 
-<Route
-  path="/emotion-radar"
-  element={
-    <>
-      <SignedIn><MoodRadarChart /></SignedIn>
-      <SignedOut><RedirectToSignIn /></SignedOut>
-    </>
-  }
-/>
-    </Routes>
+        {/* Protected Emotion Radar Page */}
+        <Route
+          path="/emotion-radar"
+          element={
+            <>
+              <SignedIn>
+                <MoodRadarChart />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+      </Routes>
+    </LanguageProvider>
   );
 }
 
