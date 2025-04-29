@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 
-// 🧩 Import custom UIs
 import MCQ from "./MCQ";
 import MatchThePair from "./MatchThePair";
 import Crossword from "./Crossword";
@@ -13,6 +12,7 @@ const LessonPage = () => {
   const { user } = useUser();
   const navigate = useNavigate();
 
+  const [series, setSeries] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -22,28 +22,51 @@ const LessonPage = () => {
   useEffect(() => {
     if (!user) return;
 
-    const fetchLesson = async () => {
-      const res = await fetch(`http://localhost:3001/api/series/${seriesSlug}/lesson/${lessonId}`);
-      const data = await res.json();
-      setQuestions(data.questions || []);
+    const fetchData = async () => {
+      const seriesRes = await fetch(`http://localhost:3001/api/series/${seriesSlug}`);
+      const seriesData = await seriesRes.json();
+      setSeries(seriesData);
+
+      const lessonRes = await fetch(`http://localhost:3001/api/series/${seriesSlug}/lesson/${lessonId}`);
+      const lessonData = await lessonRes.json();
+      setQuestions(lessonData.questions || []);
       setLoading(false);
     };
 
-    fetchLesson();
+    fetchData();
   }, [seriesSlug, lessonId, user]);
 
   const handleNext = async () => {
     if (currentQIndex + 1 < questions.length) {
-      setCurrentQIndex((prev) => prev + 1);
+      const newIndex = currentQIndex + 1;
+      setCurrentQIndex(newIndex);
+
+      await fetch(`http://localhost:3001/api/series/${seriesSlug}/progress/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lessonId,
+          lastCompletedQuestionIndex: newIndex - 1,
+          xpChange: 10,
+          heartChange: 0,
+        }),
+      });
     } else {
-      // Lesson completed
-      const currentLessonNumber = Number(lessonId?.split("-")[1]);
-      const nextLessonIndex = currentLessonNumber;
+      // Lesson completed -> Unlock next lesson
+      const [unitNum, lessonNum] = lessonId.replace('lesson-', '').split('-').map(Number);
+
+      let globalIndex = 0;
+      for (let i = 0; i < unitNum - 1; i++) {
+        globalIndex += series.units[i].lessons.length;
+      }
+      globalIndex += lessonNum - 1;
+
+      const nextLessonGlobalIndex = globalIndex + 1;
 
       await fetch(`http://localhost:3001/api/series/${seriesSlug}/progress/${user.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nextLessonIndex }),
+        body: JSON.stringify({ nextLessonGlobalIndex }),
       });
 
       setTimeout(() => {
