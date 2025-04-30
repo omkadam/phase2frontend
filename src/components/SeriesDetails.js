@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { useLanguage } from "../context/LanguageContext";
 import LanguageModal from "./LanguageModal";
+import BroadcastList from "./BroadcastList"; // ✅ Import BroadcastList
+import { Speaker } from "lucide-react"; // ✅ Icon
 
 const SeriesDetail = () => {
   const { slug } = useParams();
@@ -16,6 +18,7 @@ const SeriesDetail = () => {
   const [xp, setXp] = useState(0);
   const [hearts, setHearts] = useState(5);
   const [showLangModal, setShowLangModal] = useState(false);
+  const [showBroadcasts, setShowBroadcasts] = useState(false); // ✅ Toggle for broadcasts
 
   useEffect(() => {
     if (!user) return;
@@ -54,12 +57,6 @@ const SeriesDetail = () => {
           <span className="text-red-500">❤️ {hearts}</span>
         </div>
       </div>
-
-      {/* 🚀 Series Title */}
-      {/* <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-[#333]">{series.title?.[language]}</h1>
-        <p className="text-gray-600">{series.subtitle?.[language]}</p>
-      </div> */}
 
       {/* Units */}
       {series.units.map((unit, unitIndex) => {
@@ -133,6 +130,31 @@ const SeriesDetail = () => {
       )}
 
       {showLangModal && <LanguageModal close={() => setShowLangModal(false)} />}
+
+      {/* 🧠 Broadcast Footer Icon */}
+      <div className="fixed bottom-2 right-4 z-50">
+        <button
+          onClick={() => setShowBroadcasts(true)}
+          className="bg-[#FFDEAD] text-white p-3 rounded-full shadow-lg hover:bg-blue-600"
+        >
+          <Speaker size={24} />
+        </button>
+      </div>
+
+      {/* 📢 Broadcast Modal */}
+      {showBroadcasts && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 relative">
+            <button
+              className="absolute top-2 right-3 text-gray-600 text-xl"
+              onClick={() => setShowBroadcasts(false)}
+            >
+              ×
+            </button>
+            <BroadcastList />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
