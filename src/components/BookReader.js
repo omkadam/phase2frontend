@@ -1,18 +1,13 @@
 import React, { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { useLanguage } from "../context/LanguageContext";
 
-const BookReader = ({ question, onNext }) => {
+const BookReader = ({ pages = [], onNext }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const touchStartX = useRef(null);
   const navigate = useNavigate();
-  const { seriesSlug, lessonId } = useParams();
+  const { seriesSlug } = useParams();
   const { user } = useUser();
-  const { language } = useLanguage(); // ✅ language context
-
-  // 👉 Pages language-specific
-  const pages = question?.pages?.[language] || [];
 
   const handleNextPage = () => {
     if (currentPage + 1 < pages.length) {
@@ -43,7 +38,7 @@ const BookReader = ({ question, onNext }) => {
     }
   };
 
-  if (!pages.length) {
+  if (!Array.isArray(pages) || pages.length === 0) {
     return <div className="p-4 text-center text-red-500">No images found!</div>;
   }
 

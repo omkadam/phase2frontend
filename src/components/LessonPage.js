@@ -7,6 +7,8 @@ import MCQ from "./MCQ";
 import MatchThePair from "./MatchThePair";
 import Crossword from "./Crossword";
 import BookReader from "./BookReader";
+import ReadAloud  from "./ReadAloud";
+
 
 const LessonPage = () => {
   const { seriesSlug, lessonId } = useParams();
@@ -83,9 +85,15 @@ const LessonPage = () => {
 
     const translatedQuestion = {
       ...currentQuestion,
-      question: currentQuestion.question?.[language],
-      options: currentQuestion.options?.[language],
-      correct: currentQuestion.correct?.[language],
+      question: typeof currentQuestion.question === "object"
+        ? currentQuestion.question?.[language]
+        : currentQuestion.question,
+      options: Array.isArray(currentQuestion.options)
+        ? currentQuestion.options
+        : currentQuestion.options?.[language],
+      correct: typeof currentQuestion.correct === "object"
+        ? currentQuestion.correct?.[language]
+        : currentQuestion.correct,
       pages: currentQuestion.pages?.[language],
     };
 
@@ -98,6 +106,8 @@ const LessonPage = () => {
         return <Crossword question={translatedQuestion} onNext={handleNext} />;
       case "book":
         return <BookReader pages={translatedQuestion.pages} onNext={handleNext} />;
+      case "read-aloud":
+        return <ReadAloud question={translatedQuestion} onNext={handleNext} />;
       default:
         return <div>Unknown Question Type</div>;
     }
