@@ -10,6 +10,11 @@ import BreathingPage from "./components/BreathingPage";
 import FeelingPage from "./components/FeelingPage";
 import MoodRadarChart from "./components/MoodRadarChart";
 import { LanguageProvider } from "./context/LanguageContext"; // ✅ Import LanguageProvider
+import BroadcastList from "./components/BroadcastList"; // Import BroadcastList
+import Leaderboard from "./components/Leaderboard"; // Import Leaderboard
+import Entertainment from "./components/Entertainment"; // Import Entertainment
+import AdminPanel from "./components/AdminPanel"; // Import AdminPanel
+import Setting from "./components/Settings";
 
 function App() {
   return (
@@ -100,6 +105,81 @@ function App() {
             <>
               <SignedIn>
                 <MoodRadarChart />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        {/* Broadcasts Page */}
+        <Route
+          path="/broadcasts"
+          element={
+            <>
+              <SignedIn>
+                <BroadcastList />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        {/* Leaderboard Page */}
+        <Route
+          path="/leaderboard"
+          element={
+            <>
+              <SignedIn>
+                <Leaderboard />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/setting"
+          element={
+            <>
+              <SignedIn>
+                <Setting />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+
+        {/* Entertainment Page */}
+        <Route
+          path="/entertainment"
+          element={
+            <>
+              <SignedIn>
+                <Entertainment />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        {/* Admin Panel - Protected Route */}
+        <Route
+          path="/admin"
+          element={
+            <>
+              <SignedIn>
+                <AdminPanel />
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />

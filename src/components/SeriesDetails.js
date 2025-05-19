@@ -1,4 +1,3 @@
-// ✅ SeriesDetail.js
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
@@ -22,11 +21,29 @@ const SeriesDetail = () => {
   const [xp, setXp] = useState(0);
   const [hearts, setHearts] = useState(5);
   const [showLangModal, setShowLangModal] = useState(false);
-  const [showBroadcasts, setShowBroadcasts] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showEntertainment, setShowEntertainment] = useState(false);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
+  const [selected, setSelected] = useState("broadcasts");
+
+  const handleFooterClick = (page) => {
+    setSelected(page);
+    switch (page) {
+      case "broadcasts":
+        navigate("/learn");
+        break;
+      case "leaderboard":
+        navigate("/leaderboard");
+        break;
+      case "entertainment":
+        navigate("/broadcasts");
+        break;
+      case "learn":
+        navigate("/setting");
+        break;
+      default:
+        break;
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -56,6 +73,16 @@ const SeriesDetail = () => {
       setShowProfilePopup(true);
     }
   }, [xp, showProfilePopup, hasProfile]);
+
+  // Character images for Duolingo-style design
+  const characterImages = [
+    "/sochuloop.gif",
+    // "/raju.gif",
+    // "/sochuloop.gif",
+    // "/sochuloop.gif",
+    // "/sochuloop.gif",
+    // "/sochuloop.gif",
+  ];
 
   if (!series) return <div className="p-6 text-center">Loading...</div>;
 
@@ -91,21 +118,110 @@ const SeriesDetail = () => {
             <div className="relative flex flex-col items-center">
               {unit.lessons.map((lesson, lessonIndex) => {
                 const rightShift = Math.sin(lessonIndex * Math.PI / 3) * 50;
+                const nextRightShift = lessonIndex < unit.lessons.length - 1 ? Math.sin((lessonIndex + 1) * Math.PI / 3) * 50 : rightShift;
+                
                 let globalIndex = 0;
                 for (let i = 0; i < unitIndex; i++) {
                   globalIndex += series.units[i].lessons.length;
                 }
                 globalIndex += lessonIndex;
                 const isUnlocked = unlockedLessons.includes(globalIndex);
+                
+                // Check if lesson is completed (assuming any lesson with index < current unlocked is completed)
+                const isCompleted = globalIndex < Math.max(...unlockedLessons);
+                
+                // Character appears only at specific curve points - now only checking forward curve
+                let shouldShowCharacter = false;
+                let characterPosition = 0;
+                let characterDirection = 1;
+                
+                // Show character only at alternate curve points to avoid overlapping
+                if (lessonIndex < unit.lessons.length - 1) {
+                  const currentShift = rightShift;
+                  const isCurvePoint = Math.abs(nextRightShift - currentShift) > 30;
+                  
+                  // Show character only at specific intervals (e.g., every 3rd curve point)
+                  if (isCurvePoint && lessonIndex % 3 === 0) {
+                    shouldShowCharacter = true;
+                    
+                    if (nextRightShift < currentShift) {
+                      // Curve going left, character appears in right vacant space
+                      characterPosition = currentShift + 90;
+                      characterDirection = -1; // Face left
+                    } else {
+                      // Curve going right, character appears in left vacant space
+                      characterPosition = currentShift - 110;
+                      characterDirection = 1; // Face right
+                    }
+                  }
+                }
+                
+                const characterIndex = Math.floor(globalIndex / 5) % characterImages.length;
+                
                 return (
                   <div key={lessonIndex} className="relative flex justify-center w-full" style={{ marginTop: lessonIndex === 0 ? 0 : 24 }}>
+                    {/* Character Image - only one at a time */}
+                    {shouldShowCharacter && (
+                      <div 
+                        className="absolute top-8 z-10"
+                        style={{ 
+                          transform: `translateX(${characterPosition}px)`,
+                          width: '180px',
+                          height: '180px',
+                        }}
+                      >
+                        <img
+                          src={characterImages[characterIndex]}
+                          alt={`Character ${characterIndex + 1}`}
+                          className="w-full h-full object-contain"
+                          style={{
+                            transform: `scaleX(${characterDirection})`,
+                          }}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Lesson Button with flat design */}
                     <button
                       disabled={!canAccessUnit || !isUnlocked}
                       onClick={() => navigate(`/lesson/${slug}/lesson-${unitIndex + 1}-${lessonIndex + 1}`)}
-                      className={`w-[70px] h-[70px] rounded-full flex items-center justify-center text-white font-bold text-xl border-4 transition-all shadow-md ${canAccessUnit && isUnlocked ? "bg-yellow-400 border-yellow-500 hover:scale-110" : "bg-gray-300 border-gray-400 cursor-not-allowed"}`}
+                      className="relative transition-all duration-200 z-20"
                       style={{ transform: `translateX(${rightShift}px)` }}
                     >
-                      {lessonIndex + 1}
+                      {/* Button Shadow/Base - acts as bottom border */}
+                      <div 
+                        className={`w-[70px] h-[70px] rounded-full absolute top-1 ${
+                          canAccessUnit && isUnlocked 
+                            ? (isCompleted ? "bg-yellow-600" : "bg-yellow-600") 
+                            : "bg-gray-500"
+                        }`}
+                      />
+                      
+                      {/* Main Button - flat design without borders */}
+                      <div 
+                        className={`w-[70px] h-[70px] rounded-full flex items-center justify-center text-white font-bold text-xl relative transition-all ${
+                          canAccessUnit && isUnlocked 
+                            ? (isCompleted 
+                                ? "bg-yellow-400 hover:scale-105 active:translate-y-1" 
+                                : "bg-yellow-400 hover:scale-105 active:translate-y-1"
+                              )
+                            : "bg-gray-300 cursor-not-allowed"
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <img 
+                            src="https://d16ho1g3lqitul.cloudfront.net/done2.svg" 
+                            alt="Completed" 
+                            className="w-12 h-12"
+                          />
+                        ) : (
+                          <img 
+                            src="https://d16ho1g3lqitul.cloudfront.net/star2.svg" 
+                            alt="Not completed" 
+                            className="w-8 h-8"
+                          />
+                        )}
+                      </div>
                     </button>
                   </div>
                 );
@@ -125,46 +241,83 @@ const SeriesDetail = () => {
         </div>
       )}
 
-      <div className="fixed bottom-2 left-4 right-4 z-50 flex justify-between">
-        <button onClick={() => setShowBroadcasts(true)} className="bg-[#FFDEAD] p-3 rounded-full shadow-lg hover:bg-blue-600 text-white">
-          <Speaker size={24} />
-        </button>
-        <button onClick={() => setShowLeaderboard(true)} className="bg-yellow-500 p-3 rounded-full shadow-lg hover:bg-yellow-600 text-white">
-          <Trophy size={24} />
-        </button>
-        <button onClick={() => setShowEntertainment(true)} className="bg-green-500 p-3 rounded-full shadow-lg hover:bg-green-600 text-white">
-          <Music2 size={24} />
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-2 z-50 border-t-2"> 
+        <div className="flex justify-around items-center text-gray-600">
+          <button
+            onClick={() => handleFooterClick("broadcasts")}
+            className={`flex flex-col items-center ${
+              selected === "broadcasts" ? "text-blue-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "broadcasts"
+                  ? "/sochumenuselectednew.png"
+                  : "/sochumenuunselectednew.png"
+              }
+              alt="Broadcast"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("leaderboard")}
+            className={`flex flex-col items-center ${
+              selected === "leaderboard" ? "text-yellow-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "leaderboard"
+                  ? "/manjumenuselectednew.png"
+                  : "/manjumenuunselectednew.png"
+              }
+              alt="Leaderboard"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Leaderboard</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("entertainment")}
+            className={`flex flex-col items-center ${
+              selected === "entertainment" ? "text-green-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "entertainment"
+                  ? "/rajumenuselectednew.png"
+                  : "/rajumenuunselectednew.png"
+              }
+              alt="Entertainment"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Entertainment</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("learn")}
+            className={`flex flex-col items-center ${
+              selected === "learn" ? "text-pink-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "learn"
+                  ? "/anjumenuunselectednew.png"
+                  : "/anjumenuselectednew.png"
+              }
+              alt="Learn"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Settings</span>
+          </button>
+        </div>
       </div>
 
       {showLangModal && <LanguageModal close={() => setShowLangModal(false)} />}
-
-      {showBroadcasts && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 relative">
-            <button className="absolute top-2 right-3 text-gray-600 text-xl" onClick={() => setShowBroadcasts(false)}>×</button>
-            <BroadcastList />
-          </div>
-        </div>
-      )}
-
-      {showLeaderboard && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 relative">
-            <button className="absolute top-2 right-3 text-gray-600 text-xl" onClick={() => setShowLeaderboard(false)}>×</button>
-            <Leaderboard />
-          </div>
-        </div>
-      )}
-
-      {showEntertainment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 relative">
-            <button className="absolute top-2 right-3 text-gray-600 text-xl" onClick={() => setShowEntertainment(false)}>×</button>
-            <Entertainment />
-          </div>
-        </div>
-      )}
 
       {showProfilePopup && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">

@@ -3,37 +3,37 @@ import { useNavigate } from "react-router-dom"; // ✅ Import this
 
 const activities = [
   {
-    title: "Pause With 5 Calming Breaths",
-    subtitle: "Mindful Activity",
+    title: "Sochu Thinking Series",
+    subtitle: "Series - 1",
     duration: "12 Books + Activities",
-    img: "/doing.png",
-    people: "10 Peoples Enrolled",
+    img: "/thinking.png",
+    people: "10 People Enrolled",
     slug: "pause-with-5-breaths"
   },
   {
-    title: "Finding Hope Amid Climate Crisis",
-    subtitle: "The Wake Up",
+    title: "Sochu Feeling Series",
+    subtitle: "Series - 2",
     duration: "17 Books + Activities",
     img: "/feeling.png",
-    people: "28 Peoples Enrolled",
+    people: "28 People Enrolled",
     slug: "finding-hope"
   },
   {
-    title: "Awareness",
-    subtitle: "Today's Meditation",
+    title: "Sochu Doing Series",
+    subtitle: "Series - 3",
     duration: "22 Books + Activities",
-    img: "/thinking.png",
-    people: "51 Peoples Enrolled",
+    img: "/doing.png",
+    people: "51 People Enrolled",
     slug: "awareness"
   },
-  {
-    title: "Finding Happiness at Home",
-    subtitle: "Course",
-    duration: "29 Books + Activities",
-    img: "/doing.png",
-    people: "29 Peoples Enrolled",
-    slug: "happiness-at-home"
-  }
+  // {
+  //   title: "Finding Happiness at Home",
+  //   subtitle: "Course",
+  //   duration: "29 Books + Activities",
+  //   img: "/doing.png",
+  //   people: "29 Peoples Enrolled",
+  //   slug: "happiness-at-home"
+  // }
 ];
 
 const SeriesScreen = () => {

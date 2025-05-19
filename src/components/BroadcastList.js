@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useUser } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 
 const BroadcastList = () => {
   const { user } = useUser();
   const [broadcasts, setBroadcasts] = useState([]);
   const [subscribed, setSubscribed] = useState([]);
-  const [selectedChannel, setSelectedChannel] = useState(null); // ✅ Track clicked channel
+  const [selectedChannel, setSelectedChannel] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState("broadcasts");
+  const [showComments, setShowComments] = useState({});
+  const [newComment, setNewComment] = useState("");
+  const [commentingOnPost, setCommentingOnPost] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchBroadcasts = async () => {
@@ -22,8 +28,9 @@ const BroadcastList = () => {
 
     const fetchUserProgress = async () => {
       try {
-        // check here i think need to replace pause-with-5-breaths with {slug}
-        const res = await fetch(`http://localhost:3001/api/series/pause-with-5-breaths/progress/${user.id}`);
+        const res = await fetch(
+          `http://localhost:3001/api/series/pause-with-5-breaths/progress/${user.id}`
+        );
         const data = await res.json();
         setSubscribed(data.broadcastSubscriptions ?? []);
       } catch (err) {
@@ -38,11 +45,15 @@ const BroadcastList = () => {
     }
   }, [user]);
 
-  const subscribe = async (slug) => {
+  const subscribe = async (slug, e) => {
+    e.stopPropagation();
     try {
-      await fetch(`http://localhost:3001/api/broadcasts/${slug}/subscribe/${user.id}`, {
-        method: "POST",
-      });
+      await fetch(
+        `http://localhost:3001/api/broadcasts/${slug}/subscribe/${user.id}`,
+        {
+          method: "POST",
+        }
+      );
       setSubscribed((prev) => [...prev, slug]);
     } catch (err) {
       alert("Error subscribing to channel");
@@ -51,18 +62,109 @@ const BroadcastList = () => {
 
   const fetchPosts = async (slug, name) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/broadcasts/${slug}/posts`);
-      const data = await res.json();
-      setSelectedChannel({ name, slug });
-      setPosts(data);
+      const broadcast = broadcasts.find((b) => b.slug === slug);
+
+      if (broadcast && broadcast.posts && broadcast.posts.length > 0) {
+        setSelectedChannel({ name, slug });
+        setPosts(broadcast.posts);
+      } else {
+        const res = await fetch(`http://localhost:3001/api/broadcasts/${slug}/posts`);
+        const data = await res.json();
+        setSelectedChannel({ name, slug });
+        setPosts(data);
+      }
     } catch (err) {
       console.error("Failed to load posts", err);
     }
   };
 
+  const handleLike = async (postId) => {
+    try {
+      const res = await fetch(
+        `http://localhost:3001/api/broadcasts/${selectedChannel.slug}/posts/${postId}/like`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            username: user.username || user.firstName || "Anonymous"
+          })
+        }
+      );
+
+      if (res.ok) {
+        const updatedPost = await res.json();
+        // Update the posts state with the new like data
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post._id === postId ? { ...post, likes: updatedPost.likes } : post
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Failed to like post", err);
+    }
+  };
+
+  const handleComment = async (postId) => {
+    if (!newComment.trim()) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:3001/api/broadcasts/${selectedChannel.slug}/posts/${postId}/comment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            username: user.username || user.firstName || "Anonymous",
+            content: newComment.trim()
+          })
+        }
+      );
+
+      if (res.ok) {
+        const updatedPost = await res.json();
+        // Update the posts state with the new comment
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post._id === postId ? { ...post, comments: updatedPost.comments } : post
+          )
+        );
+        setNewComment("");
+        setCommentingOnPost(null);
+      }
+    } catch (err) {
+      console.error("Failed to add comment", err);
+    }
+  };
+
+  const toggleComments = (postId) => {
+    setShowComments(prev => ({
+      ...prev,
+      [postId]: !prev[postId]
+    }));
+  };
+
+  const isLikedByUser = (likes) => {
+    return likes && likes.some(like => like.userId === user.id);
+  };
+
   const goBack = () => {
     setSelectedChannel(null);
     setPosts([]);
+    setShowComments({});
+    setCommentingOnPost(null);
+    setNewComment("");
+  };
+
+  const handleFooterClick = (page) => {
+    setSelected(page);
+    navigate(`/${page}`);
   };
 
   if (loading) return <div className="p-4 text-center">Loading channels...</div>;
@@ -70,21 +172,186 @@ const BroadcastList = () => {
   // ✅ If channel selected, show posts
   if (selectedChannel) {
     return (
-      <div className="p-4 max-h-[75vh] overflow-y-auto">
+      <div className="p-4 overflow-y-auto">
         <div className="mb-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold">{selectedChannel.name}</h2>
-          <button onClick={goBack} className="text-sm text-blue-600 underline">← Back to Channels</button>
+          <button onClick={goBack} className="text-lg">
+            ← Back
+          </button>
+          <h2 className="text-xl font-bold text-center flex-1">{selectedChannel.name}</h2>
+          <div className="w-8"></div>
         </div>
         {posts.length === 0 ? (
-          <p className="text-gray-500">No posts yet in this channel.</p>
+          <div className="text-center py-16 text-gray-500">
+            <div className="text-4xl mb-2">📭</div>
+            <p>No posts yet in this channel.</p>
+          </div>
         ) : (
-          <div className="space-y-4">
-            {posts.map((post) => (
-              <div key={post._id} className="border rounded p-3 shadow bg-gray-50">
-                <div className="font-bold text-lg">{post.title}</div>
-                <div className="text-gray-700">{post.content}</div>
-                <div className="text-xs text-gray-400 mt-1">
-                  {new Date(post.date).toLocaleString()}
+          <div className="space-y-4 pb-20">
+            {posts.map((post, index) => (
+              <div
+                key={post._id || index}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+              >
+                {/* Post Header */}
+                <div className="flex items-center p-4 border-b border-gray-50">
+                  <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">
+                      {selectedChannel.name[0]}
+                    </span>
+                  </div>
+                  <div className="ml-3">
+                    <div className="font-semibold text-sm">{selectedChannel.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(post.date).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Post Content */}
+                <div className="p-4">
+                  {/* Display Images Above Title and Content */}
+                  {post.images && post.images.length > 0 && (
+                    <div className="grid grid-cols-1 gap-2 mb-3">
+                      {post.images.map((image, idx) => (
+                        <img
+                          key={idx}
+                          src={image}
+                          alt={`Post Image ${idx + 1}`}
+                          className="rounded-lg w-full h-auto object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <h3 className="font-bold text-lg mb-2">{post.title}</h3>
+                  <p className="text-gray-700 text-sm leading-relaxed">{post.content}</p>
+                </div>
+
+                {/* Post Footer - Likes and Comments */}
+                <div className="px-4 pb-4">
+                  <div className="flex items-center space-x-6 text-gray-500">
+                    <button 
+                      onClick={() => handleLike(post._id)}
+                      className={`flex items-center space-x-1 ${
+                        isLikedByUser(post.likes) ? 'text-red-500' : 'text-gray-500'
+                      } hover:text-red-500 transition-colors`}
+                    >
+                      <svg 
+                        className="w-5 h-5" 
+                        fill={isLikedByUser(post.likes) ? "currentColor" : "none"} 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
+                      <span className="text-sm">
+                        {post.likes?.length || 0} Like{post.likes?.length !== 1 ? 's' : ''}
+                      </span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => toggleComments(post._id)}
+                      className="flex items-center space-x-1 hover:text-blue-500 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        />
+                      </svg>
+                      <span className="text-sm">
+                        {post.comments?.length || 0} Comment{post.comments?.length !== 1 ? 's' : ''}
+                      </span>
+                    </button>
+                    
+                    {/* <button className="flex items-center space-x-1 ml-auto hover:text-blue-500 transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                        />
+                      </svg>
+                      <span className="text-sm">Save</span>
+                    </button> */}
+                  </div>
+
+                  {/* Comment Input */}
+                  {commentingOnPost === post._id && (
+                    <div className="mt-4">
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="Add a comment..."
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleComment(post._id);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => handleComment(post._id)}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
+                        >
+                          Post
+                        </button>
+                        <button
+                          onClick={() => {
+                            setCommentingOnPost(null);
+                            setNewComment("");
+                          }}
+                          className="px-4 py-2 text-gray-500 text-sm hover:text-gray-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add Comment Button */}
+                  {commentingOnPost !== post._id && (
+                    <button
+                      onClick={() => setCommentingOnPost(post._id)}
+                      className="mt-2 text-sm text-gray-500 hover:text-blue-500 transition-colors"
+                    >
+                      Add a comment...
+                    </button>
+                  )}
+
+                  {/* Comments Section */}
+                  {showComments[post._id] && post.comments && post.comments.length > 0 && (
+                    <div className="mt-4 space-y-3 max-h-60 overflow-y-auto">
+                      {post.comments.map((comment, commentIndex) => (
+                        <div key={comment._id || commentIndex} className="flex space-x-3">
+                          <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-600 rounded-full flex items-center justify-center">
+                            <span className="text-white font-bold text-xs">
+                              {comment.username[0].toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="font-semibold text-sm">{comment.username}</span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(comment.date).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700">{comment.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -94,36 +361,145 @@ const BroadcastList = () => {
     );
   }
 
-  // ✅ Show list of channels
   return (
-    <div className="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
-      <h2 className="text-xl font-bold mb-2">📡 Broadcast Channels</h2>
-      {broadcasts.map((b) => (
-        <div
-          key={b.slug}
-          className="bg-white rounded-xl shadow p-4 cursor-pointer hover:bg-gray-50 transition"
-          onClick={() => fetchPosts(b.slug, b.name)}
-        >
-          <div className="font-bold text-lg">{b.name}</div>
-          <div className="text-sm text-gray-600">{b.description}</div>
-          {subscribed.includes(b.slug) ? (
-            <span className="text-green-600 text-sm font-bold">✓ Subscribed</span>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // stop post modal open
-                subscribe(b.slug);
-              }}
-              className="mt-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
-            >
-              Subscribe
-            </button>
-          )}
+    <div className="bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <h1 className="text-xl font-bold text-center">Broadcasts</h1>
+      </div>
+
+      {/* Grid of Broadcasts */}
+      <div className="p-4 pb-24">
+        {broadcasts.length === 0 ? (
+          <div className="text-center py-16 text-gray-500">
+            <div className="text-4xl mb-2">📡</div>
+            <p>No channels found.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {broadcasts.map((b) => (
+              <div
+                key={b.slug}
+                className="relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer transform transition-all hover:scale-105 hover:shadow-lg active:scale-95"
+                onClick={() => fetchPosts(b.slug, b.name)}
+              >
+                {/* Channel Image/Placeholder */}
+                <div className="relative h-40 bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center">
+                  <div className="text-white text-6xl font-bold opacity-20">
+                    {b.name[0]}
+                  </div>
+                  
+                  {/* Subscription Badge */}
+                  {subscribed.includes(b.slug) && (
+                    <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  
+                  {/* Posts Count */}
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full">
+                    {b.posts?.length || 0} posts
+                  </div>
+                </div>
+                
+                {/* Channel Info */}
+                <div className="p-4">
+                  <h3 className="font-bold text-lg mb-1 truncate">{b.name}</h3>
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-3">{b.description}</p>
+                  
+                  {!subscribed.includes(b.slug) && (
+                    <button
+                      onClick={(e) => subscribe(b.slug, e)}
+                      className="w-full bg-blue-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors"
+                    >
+                      Subscribe
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-50"> 
+        <div className="flex justify-around items-center py-2">
+          <button
+            onClick={() => handleFooterClick("learn")}
+            className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+              selected === "broadcasts" ? "text-blue-600 bg-blue-50" : "text-gray-600"
+            }`}
+          >
+            <img
+              src={
+                selected === "learn"
+                  ? "/sochumenuselected.png"
+                  : "/sochumenuunselected.png"
+              }
+              alt="Broadcast"
+              className="h-10 w-10"
+            />
+            <span className="text-xs mt-1">Broadcasts</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("leaderboard")}
+            className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+              selected === "leaderboard" ? "text-yellow-600 bg-yellow-50" : "text-gray-600"
+            }`}
+          >
+            <img
+              src={
+                selected === "leaderboard"
+                  ? "/manjumenuselectednew.png"
+                  : "/manjumenuunselectednew.png"
+              }
+              alt="Leaderboard"
+              className="h-10 w-10"
+            />
+            <span className="text-xs mt-1">Leaderboard</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("broadcasts")}
+            className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+              selected === "entertainment" ? "text-green-600 bg-green-50" : "text-gray-600"
+            }`}
+          >
+            <img
+              src={
+                selected === "broadcasts"
+                  ? "/rajumenuselected.png"
+                  : "/rajumenuunselected.png"
+              }
+              alt="Entertainment"
+              className="h-10 w-10"
+            />
+            <span className="text-xs mt-1">Entertainment</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("setting")}
+            className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+              selected === "learn" ? "text-pink-600 bg-pink-50" : "text-gray-600"
+            }`}
+          >
+            <img
+              src={
+                selected === "setting"
+                  ? "/anjumenuunselectednew.png"
+                  : "/anjumenuselectednew.png"
+              }
+              alt="Learn"
+              className="h-10 w-10"
+            />
+            <span className="text-xs mt-1">Settings</span>
+          </button>
         </div>
-      ))}
-      {broadcasts.length === 0 && (
-        <div className="text-sm text-gray-500 text-center mt-8">No channels found.</div>
-      )}
+      </div>
     </div>
   );
 };

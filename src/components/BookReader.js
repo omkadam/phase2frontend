@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
+import { X } from "lucide-react";
 
 const BookReader = ({ pages = [], onNext }) => {
   const [currentPage, setCurrentPage] = useState(0);
@@ -38,8 +39,12 @@ const BookReader = ({ pages = [], onNext }) => {
     }
   };
 
+  const handleClose = () => {
+    navigate(-1); // Navigate to previous page
+  };
+
   if (!Array.isArray(pages) || pages.length === 0) {
-    return <div className="p-4 text-center text-red-500">No images found!</div>;
+    return <div className="text-center text-red-500">No images found!</div>;
   }
 
   const handleTouchStart = (e) => {
@@ -57,41 +62,51 @@ const BookReader = ({ pages = [], onNext }) => {
     }
   };
 
+  const handleClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    
+    if (clickX < width / 2) {
+      handlePrevPage();
+    } else {
+      handleNextPage();
+    }
+  };
+
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center bg-white p-6 select-none"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Image Display */}
-      <div className="relative max-w-xs md:max-w-md lg:max-w-lg w-full shadow-lg rounded-2xl overflow-hidden mb-8">
-        <img
-          src={pages[currentPage]}
-          alt={`Page ${currentPage + 1}`}
-          className="w-full h-auto object-contain"
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+      {/* Cross Button */}
+      <button
+        onClick={handleClose}
+        className="absolute top-4 left-4 z-50 w-12 h-12 bg-white hover:bg-gray-100 rounded-full flex items-center justify-center transition-colors shadow-lg"
+      >
+        <X size={24} className="text-black" />
+      </button>
+
+      {/* Progress Bar */}
+      <div className="absolute top-14 left-4 right-4 h-3 bg-white rounded-full overflow-hidden z-40">
+        <div
+          className="h-full bg-green-500 transition-all rounded-full"
+          style={{
+            width: `${pages.length > 0 ? ((currentPage + 1) / pages.length) * 100 : 0}%`,
+          }}
         />
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="flex gap-6">
-        <button
-          onClick={handlePrevPage}
-          disabled={currentPage === 0}
-          className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50"
-        >
-          ⬅️ Previous
-        </button>
-
-        <button
-          onClick={handleNextPage}
-          className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
-        >
-          {currentPage + 1 === pages.length ? "Finish 📚" : "Next ➡️"}
-        </button>
-      </div>
-
-      <div className="mt-4 text-sm text-gray-500">
-        Page {currentPage + 1} / {pages.length}
+      {/* Full Screen Image */}
+      <div
+        className="w-full h-full flex items-center justify-center cursor-pointer select-none"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
+      >
+        <img
+          src={pages[currentPage]}
+          alt={`Page ${currentPage + 1}`}
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
       </div>
     </div>
   );

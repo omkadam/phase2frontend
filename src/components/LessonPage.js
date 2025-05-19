@@ -7,8 +7,7 @@ import MCQ from "./MCQ";
 import MatchThePair from "./MatchThePair";
 import Crossword from "./Crossword";
 import BookReader from "./BookReader";
-import ReadAloud  from "./ReadAloud";
-
+import ReadAloud from "./ReadAloud";
 
 const LessonPage = () => {
   const { seriesSlug, lessonId } = useParams();
@@ -20,6 +19,7 @@ const LessonPage = () => {
   const [questions, setQuestions] = useState([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false); // Celebration state
 
   const currentQuestion = questions[currentQIndex];
 
@@ -55,7 +55,10 @@ const LessonPage = () => {
         }),
       });
     } else {
-      const [unitNum, lessonNum] = lessonId.replace('lesson-', '').split('-').map(Number);
+      // Show celebration screen when lesson completes
+      setShowCelebration(true);
+
+      const [unitNum, lessonNum] = lessonId.replace("lesson-", "").split("-").map(Number);
 
       let globalIndex = 0;
       for (let i = 0; i < unitNum - 1; i++) {
@@ -70,10 +73,6 @@ const LessonPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nextLessonGlobalIndex }),
       });
-
-      setTimeout(() => {
-        navigate(`/learn/${seriesSlug}`);
-      }, 1000);
     }
   };
 
@@ -99,7 +98,7 @@ const LessonPage = () => {
 
     switch (type) {
       case "mcq":
-        return <MCQ question={translatedQuestion} onNext={handleNext} />;
+        return <MCQ question={translatedQuestion} onNext={handleNext} totalQuestions={questions.length} currentQuestionIndex={currentQIndex} />;
       case "match-the-pair":
         return <MatchThePair question={translatedQuestion} onNext={handleNext} />;
       case "crossword":
@@ -113,11 +112,55 @@ const LessonPage = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
-      {renderQuestion()}
+  // Celebration Screen
+  const renderCelebration = () => (
+  <div className="fixed inset-0 bg-white flex flex-col items-center justify-center text-center p-6">
+    {/* Festive Banner */}
+    <div className="w-full flex justify-center mb-4">
+      <img 
+        src="/sochuloop.gif" 
+        alt="Celebration Banner" 
+        className="w-3/4 max-w-md"
+      />
     </div>
-  );
+
+    {/* Character with Star Animation */}
+    <div className="relative flex flex-col items-center justify-center mb-6">
+      <div className="absolute top-0 animate-pulse">
+        <img 
+          src="/path/to/your/stars.png" 
+          alt="Stars" 
+          className="w-48 h-48"
+        />
+      </div>
+      <div className="relative z-10">
+        <img 
+          src="/sochuloop.gif" 
+          alt="Character" 
+          className="w-36 h-36"
+        />
+      </div>
+    </div>
+
+    {/* Yippee Message */}
+    <h2 className="text-3xl font-extrabold mb-2">Yippee!!!</h2>
+    <p className="text-lg text-gray-600 mb-6">You've completed another one.<br />Keep going, you're doing great!</p>
+
+    {/* Continue Button */}
+    <button
+      onClick={() => navigate(`/learn/${seriesSlug}`)}
+      className="px-8 py-3 bg-yellow-400 text-black font-bold rounded-full shadow-md hover:bg-yellow-500 transition"
+    >
+      Continue
+    </button>
+  </div>
+);
+
+  return (
+  <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 relative">
+    {showCelebration ? renderCelebration() : renderQuestion()}
+  </div>
+);
 };
 
 export default LessonPage;
