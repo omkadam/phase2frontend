@@ -75,13 +75,13 @@ const Leaderboard = () => {
             <img
               src={
                 selected === "learn"
-                  ? "/sochumenuselected.png"
-                  : "/sochumenuunselected.png"
+                  ? "/sochumenuselectednew.png"
+                  : "/sochumenuunselectednew.png"
               }
               alt="Broadcast"
               className="h-14 w-14"
             />
-            <span className="text-xs">Broadcasts</span>
+            <span className="text-xs">Home</span>
           </button>
 
           <button
@@ -111,8 +111,8 @@ const Leaderboard = () => {
             <img
               src={
                 selected === "broadcasts"
-                  ? "/rajumenuselected.png"
-                  : "/rajumenuunselected.png"
+                  ? "/rajumenuselectednew.png"
+                  : "/rajumenuunselectednew.png"
               }
               alt="Entertainment"
               className="h-14 w-14"

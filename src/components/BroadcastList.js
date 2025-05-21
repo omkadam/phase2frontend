@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef  } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
+import {CircleArrowLeft} from "lucide-react"
 
 const BroadcastList = () => {
   const { user } = useUser();
@@ -13,6 +14,8 @@ const BroadcastList = () => {
   const [showComments, setShowComments] = useState({});
   const [newComment, setNewComment] = useState("");
   const [commentingOnPost, setCommentingOnPost] = useState(null);
+  const [carouselIndexes, setCarouselIndexes] = useState({});
+  const carouselRefs = useRef({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -167,6 +170,18 @@ const BroadcastList = () => {
     navigate(`/${page}`);
   };
 
+  const handleScroll = (e, postId, totalImages) => {
+  const scrollLeft = e.target.scrollLeft;
+  const width = e.target.offsetWidth;
+
+  const index = Math.round(scrollLeft / width);
+
+  setCarouselIndexes((prev) => ({
+    ...prev,
+    [postId]: Math.min(Math.max(index, 0), totalImages - 1),
+  }));
+};
+
   if (loading) return <div className="p-4 text-center">Loading channels...</div>;
 
   // ✅ If channel selected, show posts
@@ -175,9 +190,9 @@ const BroadcastList = () => {
       <div className="p-4 overflow-y-auto">
         <div className="mb-4 flex justify-between items-center">
           <button onClick={goBack} className="text-lg">
-            ← Back
+            <CircleArrowLeft className="text-gray-400"/>
           </button>
-          <h2 className="text-xl font-bold text-center flex-1">{selectedChannel.name}</h2>
+          <h2 className="text-xl font-bold text-center flex-1">🪴{selectedChannel.name}</h2>
           <div className="w-8"></div>
         </div>
         {posts.length === 0 ? (
@@ -194,10 +209,11 @@ const BroadcastList = () => {
               >
                 {/* Post Header */}
                 <div className="flex items-center p-4 border-b border-gray-50">
-                  <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+                    {/* <span className="text-white font-bold text-lg">
                       {selectedChannel.name[0]}
-                    </span>
+                    </span> */}
+                    <img src="https://d16ho1g3lqitul.cloudfront.net/sochuloading.gif"/>
                   </div>
                   <div className="ml-3">
                     <div className="font-semibold text-sm">{selectedChannel.name}</div>
@@ -210,18 +226,74 @@ const BroadcastList = () => {
                 {/* Post Content */}
                 <div className="p-4">
                   {/* Display Images Above Title and Content */}
-                  {post.images && post.images.length > 0 && (
-                    <div className="grid grid-cols-1 gap-2 mb-3">
-                      {post.images.map((image, idx) => (
-                        <img
-                          key={idx}
-                          src={image}
-                          alt={`Post Image ${idx + 1}`}
-                          className="rounded-lg w-full h-auto object-cover"
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {(post.images?.length > 0 || post.videos?.length > 0) && (
+  <div className="mb-3 relative">
+    {/* Mixed media carousel */}
+    <div
+      className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide rounded-lg"
+      style={{ scrollSnapType: "x mandatory", scrollBehavior: "smooth" }}
+      ref={(ref) => (carouselRefs.current[post._id] = ref)}
+      onScroll={(e) =>
+        handleScroll(
+          e,
+          post._id,
+          (post.images?.length || 0) + (post.videos?.length || 0)
+        )
+      }
+    >
+      {/* Show images */}
+      {post.images?.map((image, idx) => (
+        <div
+          key={`img-${idx}`}
+          className="w-full aspect-[4/5] flex-shrink-0 snap-center flex items-center justify-center bg-black rounded-lg overflow-hidden"
+        >
+          <img
+            src={image}
+            alt={`Post Image ${idx + 1}`}
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+      ))}
+
+      {/* Show videos */}
+      {post.videos?.map((video, idx) => (
+        <div
+          key={`vid-${idx}`}
+          className="w-full aspect-[4/5] flex-shrink-0 snap-center flex items-center justify-center bg-black rounded-lg overflow-hidden"
+        >
+          <video
+            controls
+            className="w-full h-full object-contain"
+            preload="metadata"
+            poster="/videoplaceholder.jpg"
+          >
+            <source src={video} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      ))}
+    </div>
+
+    {/* Dot Indicators */}
+    <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1 z-10">
+      {[
+        ...(post.images || []),
+        ...(post.videos || [])
+      ].map((_, idx) => (
+        <div
+          key={idx}
+          className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            carouselIndexes[post._id] === idx
+              ? "bg-white"
+              : "bg-white bg-opacity-50"
+          }`}
+        ></div>
+      ))}
+    </div>
+  </div>
+)}
+
+
 
                   <h3 className="font-bold text-lg mb-2">{post.title}</h3>
                   <p className="text-gray-700 text-sm leading-relaxed">{post.content}</p>
@@ -384,9 +456,9 @@ const BroadcastList = () => {
                 onClick={() => fetchPosts(b.slug, b.name)}
               >
                 {/* Channel Image/Placeholder */}
-                <div className="relative h-40 bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center">
-                  <div className="text-white text-6xl font-bold opacity-20">
-                    {b.name[0]}
+                <div className="relative h-40 bg-white flex items-center justify-center">
+                  <div className="text-white text-6xl font-bold ">
+                    🪴
                   </div>
                   
                   {/* Subscription Badge */}
@@ -400,7 +472,7 @@ const BroadcastList = () => {
                   
                   {/* Posts Count */}
                   <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full">
-                    {b.posts?.length || 0} posts
+                    {b.posts?.length || 5} posts
                   </div>
                 </div>
                 
@@ -425,31 +497,31 @@ const BroadcastList = () => {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-50"> 
-        <div className="flex justify-around items-center py-2">
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-6 z-50"> 
+        <div className="flex justify-around items-center text-gray-600">
           <button
             onClick={() => handleFooterClick("learn")}
-            className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-              selected === "broadcasts" ? "text-blue-600 bg-blue-50" : "text-gray-600"
-            }`}
+            className={`flex flex-col items-center ${
+              selected === "Entertainment" ? "text-blue-600" : "text-gray-600"
+            } transition-colors`}
           >
             <img
               src={
                 selected === "learn"
-                  ? "/sochumenuselected.png"
-                  : "/sochumenuunselected.png"
+                  ? "/sochumenuselectednew.png"
+                  : "/sochumenuunselectednew.png"
               }
               alt="Broadcast"
-              className="h-10 w-10"
+              className="h-14 w-14"
             />
-            <span className="text-xs mt-1">Broadcasts</span>
+            <span className="text-xs">Home</span>
           </button>
 
           <button
             onClick={() => handleFooterClick("leaderboard")}
-            className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-              selected === "leaderboard" ? "text-yellow-600 bg-yellow-50" : "text-gray-600"
-            }`}
+            className={`flex flex-col items-center ${
+              selected === "leaderboard" ? "text-yellow-600" : "text-gray-600"
+            } transition-colors`}
           >
             <img
               src={
@@ -458,34 +530,34 @@ const BroadcastList = () => {
                   : "/manjumenuunselectednew.png"
               }
               alt="Leaderboard"
-              className="h-10 w-10"
+              className="h-14 w-14"
             />
-            <span className="text-xs mt-1">Leaderboard</span>
+            <span className="text-xs">Leaderboard</span>
           </button>
 
           <button
             onClick={() => handleFooterClick("broadcasts")}
-            className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-              selected === "entertainment" ? "text-green-600 bg-green-50" : "text-gray-600"
-            }`}
+            className={`flex flex-col items-center ${
+              selected === "Entertainment" ? "text-green-600" : "text-gray-600"
+            } transition-colors`}
           >
             <img
               src={
                 selected === "broadcasts"
-                  ? "/rajumenuselected.png"
-                  : "/rajumenuunselected.png"
+                  ? "/rajumenuselectednew.png"
+                  : "/rajumenuunselectednew.png"
               }
               alt="Entertainment"
-              className="h-10 w-10"
+              className="h-14 w-14"
             />
-            <span className="text-xs mt-1">Entertainment</span>
+            <span className="text-xs">Entertainment</span>
           </button>
 
           <button
             onClick={() => handleFooterClick("setting")}
-            className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-              selected === "learn" ? "text-pink-600 bg-pink-50" : "text-gray-600"
-            }`}
+            className={`flex flex-col items-center ${
+              selected === "learn" ? "text-pink-600" : "text-gray-600"
+            } transition-colors`}
           >
             <img
               src={
@@ -494,9 +566,9 @@ const BroadcastList = () => {
                   : "/anjumenuselectednew.png"
               }
               alt="Learn"
-              className="h-10 w-10"
+              className="h-14 w-14"
             />
-            <span className="text-xs mt-1">Settings</span>
+            <span className="text-xs">Settings</span>
           </button>
         </div>
       </div>

@@ -23,7 +23,7 @@ const BreathingPage = () => {
       fetch(`http://localhost:3001/api/series/${seriesSlug}/progress/${user.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ heartChange: 5 }),
+        body: JSON.stringify({ setHearts: 5 }),
       }).then(() => {
         navigate(`/learn/${seriesSlug}`);
       });

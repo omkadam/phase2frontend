@@ -80,37 +80,49 @@ const LessonPage = () => {
   if (!currentQuestion) return <div className="p-4 text-center">No more questions!</div>;
 
   const renderQuestion = () => {
-    const { type } = currentQuestion;
+  const { type } = currentQuestion;
 
-    const translatedQuestion = {
-      ...currentQuestion,
-      question: typeof currentQuestion.question === "object"
-        ? currentQuestion.question?.[language]
-        : currentQuestion.question,
-      options: Array.isArray(currentQuestion.options)
-        ? currentQuestion.options
-        : currentQuestion.options?.[language],
-      correct: typeof currentQuestion.correct === "object"
-        ? currentQuestion.correct?.[language]
-        : currentQuestion.correct,
-      pages: currentQuestion.pages?.[language],
-    };
+  // Transform the pages to include both image and audio URLs
+  const formattedPages = Array.isArray(currentQuestion.pages?.[language])
+  ? currentQuestion.pages[language].map((page) => ({
+      image: page.image,
+      audio: page.audio,
+      hardWords: page.hardWords || [], // Include hard words from the page
+      speakText: page.speakText || "",
+    }))
+  : [];
 
-    switch (type) {
-      case "mcq":
-        return <MCQ question={translatedQuestion} onNext={handleNext} totalQuestions={questions.length} currentQuestionIndex={currentQIndex} />;
-      case "match-the-pair":
-        return <MatchThePair question={translatedQuestion} onNext={handleNext} />;
-      case "crossword":
-        return <Crossword question={translatedQuestion} onNext={handleNext} />;
-      case "book":
-        return <BookReader pages={translatedQuestion.pages} onNext={handleNext} />;
-      case "read-aloud":
-        return <ReadAloud question={translatedQuestion} onNext={handleNext} />;
-      default:
-        return <div>Unknown Question Type</div>;
-    }
+
+  const translatedQuestion = {
+    ...currentQuestion,
+    question: typeof currentQuestion.question === "object"
+      ? currentQuestion.question?.[language]
+      : currentQuestion.question,
+    options: Array.isArray(currentQuestion.options)
+      ? currentQuestion.options
+      : currentQuestion.options?.[language],
+    correct: typeof currentQuestion.correct === "object"
+      ? currentQuestion.correct?.[language]
+      : currentQuestion.correct,
+    pages: formattedPages,
   };
+
+  switch (type) {
+    case "mcq":
+      return <MCQ question={translatedQuestion} onNext={handleNext} totalQuestions={questions.length} currentQuestionIndex={currentQIndex} />;
+    case "match-the-pair":
+      return <MatchThePair question={translatedQuestion} onNext={handleNext} />;
+    case "crossword":
+      return <Crossword question={translatedQuestion} onNext={handleNext} />;
+    case "book":
+      return <BookReader pages={translatedQuestion.pages} onNext={handleNext} />;
+    case "read-aloud":
+      return <ReadAloud question={translatedQuestion} onNext={handleNext} />;
+    default:
+      return <div>Unknown Question Type</div>;
+  }
+};
+
 
   // Celebration Screen
   const renderCelebration = () => (
@@ -118,7 +130,7 @@ const LessonPage = () => {
     {/* Festive Banner */}
     <div className="w-full flex justify-center mb-4">
       <img 
-        src="/sochuloop.gif" 
+        src="/looping.gif" 
         alt="Celebration Banner" 
         className="w-3/4 max-w-md"
       />
@@ -126,9 +138,9 @@ const LessonPage = () => {
 
     {/* Character with Star Animation */}
     <div className="relative flex flex-col items-center justify-center mb-6">
-      <div className="absolute top-0 animate-pulse">
+      <div className="absolute top-0 ">
         <img 
-          src="/path/to/your/stars.png" 
+          src="/stars.png" 
           alt="Stars" 
           className="w-48 h-48"
         />
@@ -137,7 +149,7 @@ const LessonPage = () => {
         <img 
           src="/sochuloop.gif" 
           alt="Character" 
-          className="w-36 h-36"
+          className="w-40 h-40"
         />
       </div>
     </div>

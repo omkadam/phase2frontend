@@ -118,8 +118,8 @@ const Entertainment = () => {
             <img
               src={
                 selected === "learn"
-                  ? "/sochumenuselected.png"
-                  : "/sochumenuunselected.png"
+                  ? "/sochumenuselectednew.png"
+                  : "/sochumenuunselectednew.png"
               }
               alt="Broadcast"
               className="h-14 w-14"
@@ -136,8 +136,8 @@ const Entertainment = () => {
             <img
               src={
                 selected === "leaderboard"
-                  ? "/manjumenuselected.png"
-                  : "/manjumenuunselected.png"
+                  ? "/manjumenuselectednew.png"
+                  : "/manjumenuunselectednew.png"
               }
               alt="Leaderboard"
               className="h-14 w-14"
@@ -154,8 +154,8 @@ const Entertainment = () => {
             <img
               src={
                 selected === "broadcasts"
-                  ? "/rajumenuselected.png"
-                  : "/rajumenuunselected.png"
+                  ? "/rajumenuselectednew.png"
+                  : "/rajumenuunselectednew.png"
               }
               alt="Entertainment"
               className="h-14 w-14"
@@ -172,8 +172,8 @@ const Entertainment = () => {
             <img
               src={
                 selected === "learn"
-                  ? "/anjumenuunselected.png"
-                  : "/anjumenuselected.png"
+                  ? "/anjumenuunselectednew.png"
+                  : "/anjumenuselectednew.png"
               }
               alt="Learn"
               className="h-14 w-14"

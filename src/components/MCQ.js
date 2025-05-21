@@ -9,7 +9,7 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [isCorrect, setIsCorrect] = useState(null);
-  const [hearts, setHearts] = useState(5); // New state for hearts
+  const [hearts, setHearts] = useState(5);
   const navigate = useNavigate();
   const { seriesSlug, lessonId } = useParams();
   const { user } = useUser();
@@ -25,7 +25,7 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
   // Fetch current hearts from the backend
   useEffect(() => {
     if (!user || !seriesSlug) return;
-    
+
     fetch(`http://localhost:3001/api/series/${seriesSlug}/progress/${user.id}`)
       .then((res) => res.json())
       .then((data) => {
@@ -67,19 +67,49 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
     const correct = correctAnswer?.[language] || correctAnswer;
 
     const isCustomAnswer = question.allowCustomAnswer && trimmedInput.length > 0;
-    const correctStatus = isCustomAnswer || userAnswer.trim().toLowerCase() === correct.trim().toLowerCase();
+
+    // Determine correctness based on "anyOptionCorrect" flag
+    const correctStatus = question.anyOptionCorrect || 
+      isCustomAnswer || 
+      userAnswer.trim().toLowerCase() === correct.trim().toLowerCase();
 
     if (correctStatus) {
       setFeedback("Nicely done!");
       setIsCorrect(true);
       setSubmitted(true);
     } else {
-      setFeedback("Wrong! Please try again.");
-      setIsCorrect(false);
-      setSubmitted(true);
-      // Decrease hearts when answer is wrong
-      setHearts(prev => Math.max(0, prev - 1));
+  setFeedback("Wrong! Please try again.");
+  setIsCorrect(false);
+  setSubmitted(true);
+
+  const newHearts = Math.max(0, hearts - 1);
+  setHearts(newHearts);
+
+  // 🔥 Update in backend
+  try {
+    const res = await fetch(`http://localhost:3001/api/series/${seriesSlug}/progress/${user.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        heartChange: -1,
+      }),
+    });
+
+    // Optional: sync updated hearts
+    const updated = await res.json();
+    setHearts(updated.hearts ?? 0);
+
+    // 🧘 Navigate to breathing page if hearts exhausted
+    if ((updated.hearts ?? 0) <= 0) {
+      navigate("/breathe");
+      return;
     }
+  } catch (err) {
+    console.error("Failed to update hearts in DB:", err);
+  }
+}
   };
 
   const handleRetry = () => {
@@ -91,7 +121,7 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
   };
 
   const handleClose = () => {
-    navigate(-1); // Navigate to previous page
+    navigate(-1); // Navigate to the previous page
   };
 
   if (!question || !question.options) {
@@ -99,17 +129,17 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white overflow-hidden relative">
-      {/* Cross Button */}
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
+      {/* Close Button */}
       <button
         onClick={handleClose}
-        className="fixed top-4 left-4 z-10 w-10 h-10  hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors "
+        className="absolute top-4 left-4 z-20 w-10 h-10 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
       >
         <X size={24} className="text-gray-600" />
       </button>
 
-      {/* Fixed Progress Bar with Hearts */}
-      <div className="fixed top-14 left-4 right-4 z-10">
+      {/* Progress Bar */}
+      <div className="absolute top-16 left-4 right-4 z-10">
         <div className="flex items-center justify-between mb-2">
           <div className="bg-gray-200 rounded-full h-4 shadow-md p-1 flex-1 mr-3">
             <div
@@ -124,82 +154,66 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
         </div>
       </div>
 
-      <div className="flex flex-col items-center justify-center w-full mt-20">
-        <h2 className="text-2xl font-bold mb-4 text-center">
+      {/* Content Area - Using flex-grow to take available space */}
+      <div className="flex flex-col items-center justify-center flex-grow pt-28 px-4 pb-20 max-h-full">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4">
           {typeof question.question === "object" ? question.question.en : question.question}
         </h2>
 
-        <div className="grid grid-cols-2 gap-4 w-full max-w-xl">
-          {(question.options || []).map((opt, idx) => {
-            const value = typeof opt === "string" ? { text: opt } : opt;
-            return (
-              <button
-                key={idx}
-                onClick={() => handleOptionClick(value)}
-                className={`flex flex-col items-center justify-center gap-2 p-4 border-2 rounded-lg shadow-md transition ${
-                  selectedOption === value.text ? "border-green-500 bg-green-100" : "border-gray-300"
-                }`}
-              >
-                {value.image && (
-                  <img src={value.image} alt="option" className="w-16 h-16 rounded-md" />
-                )}
-                <div className="text-lg font-semibold">{value.text}</div>
-              </button>
-            );
-          })}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-2xl mx-auto">
+          {(question.options || []).map((opt, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleOptionClick(opt)}
+              className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 border-2 rounded-lg shadow-sm sm:shadow-md transition text-sm sm:text-base ${
+                selectedOption === opt.text ? "border-green-500 bg-green-100" : "border-gray-300"
+              }`}
+            >
+              {opt.image && (
+                <img src={opt.image} alt="option" className="w-24 h-24 sm:w-16 sm:h-16 rounded-md" />
+              )}
+              <div className="font-semibold">{opt.text}</div>
+            </button>
+          ))}
         </div>
-
-        {question.allowCustomAnswer && (
-          <input
-            type="text"
-            placeholder="Or write your own answer"
-            value={customInput}
-            onChange={(e) => {
-              setCustomInput(e.target.value);
-              setSelectedOption(null);
-            }}
-            className="mt-4 p-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500"
-          />
-        )}
 
         {!submitted && (
           <button
             onClick={handleSubmit}
             disabled={!selectedOption && !customInput}
-            className="mt-6 px-8 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg disabled:opacity-50"
+            className="mt-5 w-1/2 py-3 sm:py-4 bg-green-500 hover:border-green-600 text-white font-bold rounded-lg 
+              disabled:opacity-50 text-sm sm:text-base border-b-4 border-green-800 
+              active:translate-y-1 transition-all duration-150 mx-auto block"
           >
             Submit
           </button>
         )}
       </div>
 
+      {/* Feedback Section - Fixed at bottom */}
       {feedback && (
         <div
-          className={`fixed bottom-0 left-0 w-full p-4 flex items-center justify-between text-white font-semibold text-lg rounded-t-xl transition-all ${
+          className={`fixed bottom-0 left-0 w-full z-50 p-4 flex items-center justify-between text-white font-semibold text-sm sm:text-lg rounded-t-xl shadow-lg ${
             isCorrect ? "bg-green-500" : "bg-red-500"
           }`}
         >
           <div className="flex items-center gap-2">
-            {isCorrect ? (
-              <CheckCircle size={24} className="text-white" />
-            ) : (
-              <XCircle size={24} className="text-white" />
-            )}
+            {isCorrect ? <CheckCircle size={24} /> : <XCircle size={24} />}
             {feedback}
           </div>
           {isCorrect ? (
             <button
-              onClick={() => {
-                if (onNext) onNext();
-              }}
-              className="bg-white text-green-600 font-bold py-2 px-4 rounded-full shadow-lg"
+              onClick={onNext}
+              className="bg-white text-green-600 font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-full 
+             border-b-4 border-green-600 active:translate-y-1 shadow-md 
+             transition-all duration-150"
             >
               Next
             </button>
           ) : (
             <button
               onClick={handleRetry}
-              className="bg-white text-red-600 font-bold py-2 px-4 rounded-full shadow-lg"
+              className="bg-white text-red-600 font-bold py-1 sm:py-2 px-3 sm:px-4 rounded-full shadow-md"
             >
               Retry
             </button>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // ✅ Import this
 
 const activities = [
@@ -15,16 +15,18 @@ const activities = [
     subtitle: "Series - 2",
     duration: "17 Books + Activities",
     img: "/feeling.png",
-    people: "28 People Enrolled",
-    slug: "finding-hope"
+    people: "0 People Enrolled",
+    slug: "finding-hope",
+    disabled: true, // 👈 Add this
   },
   {
     title: "Sochu Doing Series",
     subtitle: "Series - 3",
     duration: "22 Books + Activities",
     img: "/doing.png",
-    people: "51 People Enrolled",
-    slug: "awareness"
+    people: "0 People Enrolled",
+    slug: "awareness",
+    disabled: true, // 👈 Add this
   },
   // {
   //   title: "Finding Happiness at Home",
@@ -38,6 +40,11 @@ const activities = [
 
 const SeriesScreen = () => {
   const navigate = useNavigate(); // ✅ Hook to navigate on click
+  const [selected, setSelected] = useState("leaderboard");
+  const handleFooterClick = (page) => {
+    setSelected(page);
+    navigate(`/${page}`);
+  };
 
   return (
     <div className="min-h-screen bg-white pt-6 px-4 pb-[100px]">
@@ -70,8 +77,14 @@ const SeriesScreen = () => {
 
             {/* Clickable Card */}
             <div
-              onClick={() => navigate(`/learn/${item.slug}`)} // ✅ Navigate to detail
-              className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              onClick={() => {
+                if (!item.disabled) navigate(`/learn/${item.slug}`);
+              }}
+              className={`flex-1 rounded-xl shadow-sm border p-5 flex items-center justify-between transition-transform ${
+                item.disabled
+                  ? "bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed"
+                  : "bg-white border-gray-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              }`}
             >
               <div className="flex flex-col gap-1 max-w-[60%]">
                 <div className="flex items-center gap-1 text-[15px] font-semibold">
@@ -79,6 +92,9 @@ const SeriesScreen = () => {
                 </div>
                 <p className="text-sm text-gray-500">{item.subtitle}</p>
                 <p className="text-sm text-gray-400">{item.duration}</p>
+                {item.disabled && (
+  <p className="text-xs mt-1 text-green-500 font-semibold">Coming Soon</p>
+)}
                 {item.people && (
                   <p className="text-sm text-indigo-500 mt-1">{item.people}</p>
                 )}
@@ -95,27 +111,80 @@ const SeriesScreen = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 h-[70px] bg-white border-t border-gray-200 flex justify-around items-center px-6 z-50">
-        <img
-          src="https://d16ho1g3lqitul.cloudfront.net/homev2.svg"
-          className="w-7 h-7"
-          alt="Home"
-        />
-        <img
-          src="https://d16ho1g3lqitul.cloudfront.net/leaderboardv2.svg"
-          className="w-7 h-7"
-          alt="Leaderboard"
-        />
-        <img
-          src="https://d16ho1g3lqitul.cloudfront.net/questsv2.svg"
-          className="w-7 h-7"
-          alt="Quests"
-        />
-        <img
-          src="https://d16ho1g3lqitul.cloudfront.net/shopv2.svg"
-          className="w-7 h-7"
-          alt="Shop"
-        />
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-1 z-50"> 
+        <div className="flex justify-around items-center text-gray-600">
+          <button
+            onClick={() => handleFooterClick("learn")}
+            className={`flex flex-col items-center ${
+              selected === "broadcasts" ? "text-blue-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "learn"
+                  ? "/sochumenuselectednew.png"
+                  : "/sochumenuunselectednew.png"
+              }
+              alt="Broadcast"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Home</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("leaderboard")}
+            className={`flex flex-col items-center ${
+              selected === "leaderboard" ? "text-yellow-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "leaderboard"
+                  ? "/manjumenuselectednew.png"
+                  : "/manjumenuunselectednew.png"
+              }
+              alt="Leaderboard"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Leaderboard</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("broadcasts")}
+            className={`flex flex-col items-center ${
+              selected === "entertainment" ? "text-green-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "broadcasts"
+                  ? "/rajumenuselectednew.png"
+                  : "/rajumenuunselectednew.png"
+              }
+              alt="Entertainment"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Entertainment</span>
+          </button>
+
+          <button
+            onClick={() => handleFooterClick("setting")}
+            className={`flex flex-col items-center ${
+              selected === "learn" ? "text-pink-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "setting"
+                  ? "/anjumenuunselectednew.png"
+                  : "/anjumenuselectednew.png"
+              }
+              alt="Learn"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Settings</span>
+          </button>
+        </div>
       </div>
     </div>
   );

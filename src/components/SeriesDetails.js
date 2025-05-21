@@ -8,6 +8,7 @@ import XPProfileForm from "./XPProfileForm";
 import Leaderboard from "./Leaderboard";
 import Entertainment from "./Entertainment";
 import { Speaker, Trophy, Music2 } from "lucide-react";
+import {CircleArrowLeft} from "lucide-react"
 
 const SeriesDetail = () => {
   const { slug } = useParams();
@@ -90,7 +91,8 @@ const SeriesDetail = () => {
     <div className="min-h-screen bg-white pt-4 pb-32 px-4 overflow-x-hidden relative">
       <div className="flex items-center justify-between mb-6 sticky top-0 bg-white py-3 z-50">
         <div className="flex items-center gap-6">
-          <button onClick={() => navigate("/learn")} className="text-2xl">←</button>
+          {/* <button onClick={() => navigate("/learn")} className="text-2xl">←</button> */}
+          <CircleArrowLeft onClick={() => navigate("/learn")} className="text-gray-400 hover:text-red-500"/>
           <img
             src="https://d16ho1g3lqitul.cloudfront.net/india.svg"
             alt="lang"
@@ -108,7 +110,7 @@ const SeriesDetail = () => {
         const canAccessUnit = isSubscribed || unitIndex === 0;
         return (
           <div key={unitIndex} className="mb-12">
-            <div className="bg-[#009aef] text-white rounded-xl px-6 py-5 flex justify-between items-center shadow-lg mb-6">
+            <div className="bg-[#009aef] text-white rounded-xl px-6 py-5 flex justify-between items-center shadow-lg mb-6 border-b-4 border-blue-600">
               <div>
                 <h2 className="text-xl font-bold">{unit.title?.[language]}</h2>
                 <p className="text-sm opacity-90">{unit.subtitle?.[language]}</p>
@@ -163,11 +165,11 @@ const SeriesDetail = () => {
                     {/* Character Image - only one at a time */}
                     {shouldShowCharacter && (
                       <div 
-                        className="absolute top-8 z-10"
+                        className="absolute top-[90px] z-10 pl-7"
                         style={{ 
                           transform: `translateX(${characterPosition}px)`,
-                          width: '180px',
-                          height: '180px',
+                          width: '200px',
+                          height: '200px',
                         }}
                       >
                         <img
@@ -231,15 +233,34 @@ const SeriesDetail = () => {
         );
       })}
 
-      {!isSubscribed && (
-        <div className="fixed bottom-4 left-0 right-0 flex justify-center items-center px-6">
-          <div className="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 text-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center animate-pulse">
+      {/* {!isSubscribed && (
+        <div className="fixed bottom-4 left-0 right-0 flex justify-center items-center px-6 z-[100]">
+          <div className="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 text-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center animate-bounce">
             <div className="text-2xl font-bold mb-2">🚀 Unlock All Units!</div>
             <div className="text-sm opacity-90 mb-4">Subscribe now and continue your journey!</div>
             <button className="mt-2 bg-white text-pink-600 font-bold py-2 px-6 rounded-full shadow-md hover:bg-pink-100 transition">Subscribe 🚀</button>
           </div>
         </div>
-      )}
+      )} */}
+
+      {!isSubscribed && (
+  <div className="fixed bottom-4 left-0 right-0 flex justify-center items-center px-6 z-[100]">
+    <div className="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 text-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center animate-bounce">
+      <div className="text-2xl font-bold mb-2">🚀 Unlock All Units!</div>
+      <div className="text-sm opacity-90 mb-4">Subscribe now and continue your journey!</div>
+      
+      {/* ✅ WhatsApp Button */}
+      <a
+        href="https://wa.me/917057508057?text=Hi%20Om%2C%20I'm%20interested%20in%20unlocking%20all%20units%20on%20Sochu.%20Could%20you%20please%20help%20me%20with%20the%20subscription%20process%3F"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 bg-white text-pink-600 font-bold py-2 px-6 rounded-full shadow-md hover:bg-pink-100 transition block"
+      >
+        Subscribe 🚀
+      </a>
+    </div>
+  </div>
+)}
 
       <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-2 z-50 border-t-2"> 
         <div className="flex justify-around items-center text-gray-600">
