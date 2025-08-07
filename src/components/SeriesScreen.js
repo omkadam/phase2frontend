@@ -8,7 +8,7 @@ const activities = [
     duration: "12 Books + Activities",
     img: "/thinking.png",
     people: "10 People Enrolled",
-    slug: "pause-with-5-breaths"
+    slug: "pause-with-5-breaths",
   },
   {
     title: "Sochu Feeling Series",
@@ -40,7 +40,7 @@ const activities = [
 
 const SeriesScreen = () => {
   const navigate = useNavigate(); // ✅ Hook to navigate on click
-  const [selected, setSelected] = useState("leaderboard");
+  const [selected, setSelected] = useState("home");
   const handleFooterClick = (page) => {
     setSelected(page);
     navigate(`/${page}`);
@@ -68,9 +68,7 @@ const SeriesScreen = () => {
             <div className="w-10 flex justify-center relative">
               <span
                 className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full ${
-                  idx === 0
-                    ? "bg-[#e82829]"
-                    : "bg-white border border-gray-400"
+                  idx === 0 ? "bg-[#e82829]" : "bg-white border border-gray-400"
                 } block z-10`}
               ></span>
             </div>
@@ -93,8 +91,10 @@ const SeriesScreen = () => {
                 <p className="text-sm text-gray-500">{item.subtitle}</p>
                 <p className="text-sm text-gray-400">{item.duration}</p>
                 {item.disabled && (
-  <p className="text-xs mt-1 text-green-500 font-semibold">Coming Soon</p>
-)}
+                  <p className="text-xs mt-1 text-green-500 font-semibold">
+                    Coming Soon
+                  </p>
+                )}
                 {item.people && (
                   <p className="text-sm text-indigo-500 mt-1">{item.people}</p>
                 )}
@@ -111,12 +111,16 @@ const SeriesScreen = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-1 z-50"> 
-        <div className="flex justify-around items-center text-gray-600">
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-3 z-50">
+        <div className="flex justify-around items-center text-gray-600 pb-3">
           <button
-            onClick={() => handleFooterClick("learn")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Make sure this file exists in public/sounds
+              audio.play();
+              handleFooterClick("learn");
+            }}
             className={`flex flex-col items-center ${
-              selected === "broadcasts" ? "text-blue-600" : "text-gray-600"
+              selected === "home" ? "text-blue-600" : "text-gray-600"
             } transition-colors`}
           >
             <img
@@ -128,11 +132,15 @@ const SeriesScreen = () => {
               alt="Broadcast"
               className="h-14 w-14"
             />
-            <span className="text-xs">Home</span>
+            <span className="text-xs">Learn</span>
           </button>
 
           <button
-            onClick={() => handleFooterClick("leaderboard")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Make sure the sound file exists in public/sounds/
+              audio.play();
+              handleFooterClick("leaderboard");
+            }}
             className={`flex flex-col items-center ${
               selected === "leaderboard" ? "text-yellow-600" : "text-gray-600"
             } transition-colors`}
@@ -150,14 +158,18 @@ const SeriesScreen = () => {
           </button>
 
           <button
-            onClick={() => handleFooterClick("broadcasts")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Make sure this file exists in public/sounds
+              audio.play();
+              handleFooterClick("episodes");
+            }}
             className={`flex flex-col items-center ${
               selected === "entertainment" ? "text-green-600" : "text-gray-600"
             } transition-colors`}
           >
             <img
               src={
-                selected === "broadcasts"
+                selected === "episodes"
                   ? "/rajumenuselectednew.png"
                   : "/rajumenuunselectednew.png"
               }
@@ -168,7 +180,11 @@ const SeriesScreen = () => {
           </button>
 
           <button
-            onClick={() => handleFooterClick("setting")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Make sure this file is in your public/sounds folder
+              audio.play();
+              handleFooterClick("setting");
+            }}
             className={`flex flex-col items-center ${
               selected === "learn" ? "text-pink-600" : "text-gray-600"
             } transition-colors`}
@@ -182,7 +198,7 @@ const SeriesScreen = () => {
               alt="Learn"
               className="h-14 w-14"
             />
-            <span className="text-xs">Settings</span>
+            <span className="text-xs">Profile</span>
           </button>
         </div>
       </div>

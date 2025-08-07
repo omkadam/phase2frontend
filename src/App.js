@@ -1,8 +1,14 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import WelcomeScreen from "./components/WelcomeScreen";
 import LearnPage from "./components/LearnPage";
-import { SignedIn, SignedOut, SignIn, RedirectToSignIn } from "@clerk/clerk-react";
+import {
+  SignedIn,
+  SignedOut,
+  SignIn,
+  RedirectToSignIn,
+  useClerk,
+} from "@clerk/clerk-react";
 import SeriesScreen from "./components/SeriesScreen";
 import SeriesDetail from "./components/SeriesDetails";
 import LessonPage from "./components/LessonPage";
@@ -15,13 +21,55 @@ import Leaderboard from "./components/Leaderboard"; // Import Leaderboard
 import Entertainment from "./components/Entertainment"; // Import Entertainment
 import AdminPanel from "./components/AdminPanel"; // Import AdminPanel
 import Setting from "./components/Settings";
+import ParentingTest from "./components/ParentingTest";
+import Wheel from "./components/Trying";
+import Trying from "./components/Trying";
+import PlanningsPage from "./components/PlanningsPage ";
+import EpisodesComponent from "./components/EpisodesComponent";
+
+// SSO Callback Component for Apple Sign In
+const SSOCallback = () => {
+  const { handleRedirectCallback } = useClerk();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleCallback = async () => {
+      try {
+        await handleRedirectCallback();
+        navigate("/learn");
+      } catch (error) {
+        console.error("SSO Callback error:", error);
+        navigate("/");
+      }
+    };
+
+    handleCallback();
+  }, [handleRedirectCallback, navigate]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Completing sign in...</p>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   return (
-    <LanguageProvider> {/* ✅ Wrap your complete app */}
+    <LanguageProvider>
+      {" "}
+      {/* ✅ Wrap your complete app */}
       <Routes>
         <Route path="/" element={<WelcomeScreen />} />
-        <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
+        <Route
+          path="/sign-in/*"
+          element={<SignIn routing="path" path="/sign-in" />}
+        />
+
+        {/* ✅ SSO Callback Route for Apple Sign In */}
+        <Route path="/sso-callback" element={<SSOCallback />} />
 
         {/* ✅ Protected Feeling Page */}
         <Route
@@ -97,6 +145,7 @@ function App() {
             </>
           }
         />
+        
 
         {/* Protected Emotion Radar Page */}
         <Route
@@ -157,7 +206,6 @@ function App() {
           }
         />
 
-
         {/* Entertainment Page */}
         <Route
           path="/entertainment"
@@ -180,6 +228,60 @@ function App() {
             <>
               <SignedIn>
                 <AdminPanel />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/parenting-test"
+          element={
+            <>
+              <SignedIn>
+                <ParentingTest />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/trying"
+          element={
+            <>
+              <SignedIn>
+                <Trying />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+        <Route
+          path="/plannings"
+          element={
+            <>
+              <SignedIn>
+                <PlanningsPage  />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+        <Route
+          path="/episodes"
+          element={
+            <>
+              <SignedIn>
+                <EpisodesComponent />
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />

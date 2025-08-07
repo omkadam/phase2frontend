@@ -1,123 +1,236 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
-import { Settings, Edit, Camera } from "lucide-react";
+import { useUser, useClerk } from "@clerk/clerk-react";
+import {
+  Settings,
+  Edit,
+  Camera,
+  Trash2,
+  AlertTriangle,
+  MessageCircle,
+  Mail,
+  HelpCircle,
+} from "lucide-react";
 
 const Setting = () => {
   const navigate = useNavigate();
   const { user } = useUser();
+  const { signOut } = useClerk();
   const [selected, setSelected] = useState("setting");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const [userProfile, setUserProfile] = useState({
     name: "",
     username: "",
     joined: "",
     friends: 1,
     profilePicture: null,
-    dob: null
+    dob: null,
   });
 
   const [userProgress, setUserProgress] = useState({
     hearts: 0,
-    totalXP: 0
+    totalXP: 0,
   });
 
   // Function to format date
   const formatJoinedDate = (dateString) => {
     if (!dateString) return "Recently";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
   // Function to fetch user progress data (hearts and XP)
   const fetchUserProgress = async (slug, userId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/series/${slug}/progress/${userId}`);
-      
+      const response = await fetch(
+        `https://sochu.online/api/series/${slug}/progress/${userId}`
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       setUserProgress({
         hearts: data.hearts || 0,
-        totalXP: data.totalXP || data.xp || 0
+        totalXP: data.totalXP || data.xp || 0,
       });
-      
     } catch (error) {
       console.error("Error fetching user progress:", error);
       // Set default values if API fails
       setUserProgress({
         hearts: 0,
-        totalXP: 0
+        totalXP: 0,
       });
     }
   };
 
   // Function to fetch user profile data
-  // Function to fetch user profile data
-const fetchUserProfile = async (userId) => {
-  try {
-    setLoading(true);
-    setError(null);
-    
-    const response = await fetch(`http://localhost:3001/api/user-profile/${userId}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    // Update user profile with fetched data
-    setUserProfile(prevProfile => ({
-      ...prevProfile,
-      name: data.name || user?.fullName || "User",
-      username: data.username || user?.username || "username",
-      joined: formatJoinedDate(data.dob || data.createdAt || new Date()),
-      profilePicture: data.profileImage || user?.profileImageUrl || null, // Update with fetched image URL
-      dob: data.dob
-    }));
-    
-  } catch (error) {
-    console.error("Error fetching user profile:", error);
-    setError(error.message);
-    
-    // Fallback to user data from Clerk if API fails
-    setUserProfile(prevProfile => ({
-      ...prevProfile,
-      name: user?.fullName || "User",
-      username: user?.username || "username",
-      joined: "Recent",
-      profilePicture: user?.profileImageUrl || null
-    }));
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchUserProfile = async (userId) => {
+    try {
+      setLoading(true);
+      setError(null);
 
+      const response = await fetch(
+        `https://sochu.online/api/user-profile/${userId}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Update user profile with fetched data
+      setUserProfile((prevProfile) => ({
+        ...prevProfile,
+        name: data.name || user?.fullName || "User",
+        username: data.username || user?.username || "username",
+        joined: formatJoinedDate(data.dob || data.createdAt || new Date()),
+        profilePicture: data.profileImage || user?.profileImageUrl || null,
+        dob: data.dob,
+      }));
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      setError(error.message);
+
+      // Fallback to user data from Clerk if API fails
+      setUserProfile((prevProfile) => ({
+        ...prevProfile,
+        name: user?.fullName || "User",
+        username: user?.username || "username",
+        joined: "Recent",
+        profilePicture: user?.profileImageUrl || null,
+      }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to handle account deletion
+  const handleDeleteAccount = async () => {
+    if (!user?.id) {
+      alert("Unable to delete account. Please try again.");
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      // First, delete user data from your backend
+      const response = await fetch(
+        `https://sochu.online/api/user-profile/${user.id}/delete`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Backend deletion failed: ${response.status}`);
+      }
+
+      console.log("✅ Backend data deleted successfully");
+
+      // Then try to delete from Clerk
+      try {
+        await user.delete();
+        console.log("✅ Clerk account deleted successfully");
+      } catch (clerkError) {
+        console.error("Clerk deletion error:", clerkError);
+
+        // If Clerk deletion fails, sign out the user instead
+        if (
+          clerkError.message?.includes("additional verification") ||
+          clerkError.message?.includes("Forbidden") ||
+          clerkError.status === 403
+        ) {
+          console.log(
+            "⚠️ Clerk requires additional verification, signing out user instead"
+          );
+          await signOut();
+        } else {
+          // For other Clerk errors, still sign out
+          console.log("⚠️ Clerk deletion failed, signing out user instead");
+          await signOut();
+        }
+      }
+
+      // Show success message and redirect
+      alert(
+        "Account deleted successfully! All your data has been permanently removed."
+      );
+      navigate("/");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+
+      // Check if it's a backend error vs Clerk error
+      if (error.message?.includes("Backend deletion failed")) {
+        alert(
+          "Failed to delete account data. Please try again or contact support."
+        );
+      } else {
+        // If backend succeeded but Clerk failed, still redirect (user data is deleted)
+        alert("Account data deleted successfully. You have been signed out.");
+        try {
+          await signOut();
+        } catch (signOutError) {
+          console.error("Error signing out:", signOutError);
+        }
+        navigate("/");
+      }
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  // Function to handle support email
+  const handleSupportEmail = () => {
+    const subject = encodeURIComponent("Technical Support Request");
+    const body = encodeURIComponent(
+      "Hi Sochu tech team,\n\nI need help with:\n\n[Please describe your issue here]\n\nThanks!"
+    );
+    window.open(
+      `mailto:tech@cordiformstudios.com?subject=${subject}&body=${body}`,
+      "_blank"
+    );
+  };
+
+  // Function to handle author email
+  const handleAuthorEmail = () => {
+    const subject = encodeURIComponent("Message for Sochu Author");
+    const body = encodeURIComponent(
+      "Hi there,\n\n[Your message here]\n\nBest regards!"
+    );
+    window.open(
+      `mailto:chevohra@cordiformstudios.com?subject=${subject}&body=${body}`,
+      "_blank"
+    );
+  };
 
   useEffect(() => {
     // Fetch user profile data when component mounts or user changes
     if (user && user.id) {
       fetchUserProfile(user.id);
-      
-      // Fetch user progress data (you need to provide the slug)
-      // Replace 'your-series-slug' with the actual series slug you want to fetch progress for
-      // You might want to store this in state or get it from props/params
-      const defaultSlug = 'pause-with-5-breaths'; // Update this with your actual slug
+
+      // Fetch user progress data
+      const defaultSlug = "pause-with-5-breaths";
       fetchUserProgress(defaultSlug, user.id);
     } else if (user) {
       // If user exists but no ID, set loading to false and use available data
       setLoading(false);
-      setUserProfile(prevProfile => ({
+      setUserProfile((prevProfile) => ({
         ...prevProfile,
         name: user.fullName || "User",
         username: user.username || "username",
-        profilePicture: user.profileImageUrl || null
+        profilePicture: user.profileImageUrl || null,
       }));
     }
   }, [user]);
@@ -145,11 +258,11 @@ const fetchUserProfile = async (userId) => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 mb-4">Error loading profile: {error}</p>
-          <button 
+          <button
             onClick={() => {
               if (user?.id) {
                 fetchUserProfile(user.id);
-                const defaultSlug = 'your-series-slug';
+                const defaultSlug = "your-series-slug";
                 fetchUserProgress(defaultSlug, user.id);
               }
             }}
@@ -163,132 +276,226 @@ const fetchUserProfile = async (userId) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm py-4 px-4 flex justify-between items-center">
-        <h1 className="text-lg font-semibold text-gray-700">Profile</h1>
-        {/* <button className="p-2 hover:bg-gray-100 rounded-full">
-          <Settings size={24} className="text-gray-600" />
-        </button> */}
-      </div>
-
-      {/* Profile Section */}
-      <div className="bg-white mx-4 mt-4 rounded-xl shadow-sm overflow-hidden">
-        <div className="bg-blue-100 p-8 relative">
-          {/* Edit Button */}
-          <button className="absolute top-4 right-4 bg-white/80 p-2 rounded-lg hover:bg-white">
-            <Edit size={20} className="text-gray-600" />
-          </button>
-          
-          {/* Profile Avatar */}
-          <div className="flex justify-center">
-  <div className="relative">
-    {userProfile.profilePicture ? (
-      <img 
-        src={userProfile.profilePicture} 
-        alt="Profile" 
-        className="w-32 h-32 rounded-full border-4 border-dashed border-blue-300 cursor-pointer"
-        onClick={() => document.getElementById("profileImageInput").click()}
-      />
-    ) : (
-      <div 
-        className="w-32 h-32 bg-blue-300 rounded-full border-4 border-dashed border-blue-400 flex items-center justify-center cursor-pointer"
-        onClick={() => document.getElementById("profileImageInput").click()}
-      >
-        <Camera size={32} className="text-white" />
-      </div>
-    )}
-    <input
-      type="file"
-      id="profileImageInput"
-      accept="image/*"
-      style={{ display: "none" }}
-      onChange={async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const formData = new FormData();
-          formData.append("profileImage", file);
-
-          try {
-            const response = await fetch(`http://localhost:3001/api/user-profile/${user.id}/upload`, {
-              method: "POST",
-              body: formData,
-            });
-
-            if (!response.ok) throw new Error("Image upload failed");
-
-            const data = await response.json();
-            setUserProfile((prev) => ({
-              ...prev,
-              profilePicture: data.profileImage,
-            }));
-
-            alert("Profile picture updated successfully!");
-          } catch (err) {
-            console.error("Error uploading image:", err);
-            alert("Failed to upload image. Please try again.");
-          }
-        }
-      }}
-    />
-  </div>
-</div>
-        </div>
-        
-        {/* User Info */}
-        <div className="px-6 py-4">
-          <div className="text-center mb-4">
-            <h2 className="text-xl font-bold text-gray-800">{userProfile.name}</h2>
-            <p className="text-gray-600">{userProfile.username}</p>
-            <p className="text-gray-500 text-sm mt-1">Joined {userProfile.joined}</p>
-          </div>
-          
-          <div className="flex justify-center items-center">
-            {/* <span className="text-blue-500 font-semibold">{userProfile.friends} Friend</span> */}
-            <img src="https://d16ho1g3lqitul.cloudfront.net/india.svg" alt="India Flag" className="w-6 h-4 rounded" />
-          </div>
-        </div>
-      </div>
-
-      {/* Statistics Section */}
-      <div className="px-4 mt-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Statistics</h3>
-        
-        <div className="flex gap-4">
-          {/* Hearts */}
-          <div className="bg-white rounded-xl p-4 flex-1 shadow-sm">
-            <div className="flex items-center mb-2">
-              <span className="text-2xl">❤️</span>
-              <span className="text-xl font-bold ml-2">{userProgress.hearts}</span>
-            </div>
-            <p className="text-gray-600 text-sm">Hearts</p>
-          </div>
-          
-          {/* Total XP */}
-          <div className="bg-white rounded-xl p-4 flex-1 shadow-sm">
-            <div className="flex items-center mb-2">
-              <span className="text-2xl">⚡</span>
-              <span className="text-xl font-bold ml-2">{userProgress.totalXP}</span>
-            </div>
-            <p className="text-gray-600 text-sm">Total XP</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Error message (if any) */}
-      {error && (
-        <div className="mx-4 mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 text-sm">
-            Note: Some profile data couldn't be loaded. Using available information.
+    <div className="min-h-screen bg-gray-50 pb-32">
+      {/* Header - Simplified without banner */}
+      <div className="p-4 bg-white">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold mb-2">Profile</h2>
+          <p className="text-sm text-gray-500">
+            Manage your account and view your progress
           </p>
+          <hr className="border-gray-300 my-4" />
+        </div>
+
+        {/* Profile Content */}
+        <div className="space-y-4">
+          {/* User Profile Card */}
+          <div className="bg-white p-4 rounded-xl shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white text-lg font-semibold">
+                {userProfile.name
+                  ? userProfile.name.charAt(0).toUpperCase()
+                  : "U"}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-gray-800">
+                  {userProfile.name}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  @{userProfile.username} • Joined {userProfile.joined}
+                </p>
+              </div>
+              <div className="flex items-center">
+                <img
+                  src="https://d16ho1g3lqitul.cloudfront.net/india.svg"
+                  alt="India Flag"
+                  className="w-6 h-4 rounded"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Hearts */}
+            <div className="bg-white p-4 rounded-xl shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="text-xl font-bold text-blue-600">❤️</div>
+                <div>
+                  <div className="text-lg font-medium text-gray-800">
+                    {userProgress.hearts}
+                  </div>
+                  <p className="text-sm text-gray-500">Hearts</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Total XP */}
+            <div className="bg-white p-4 rounded-xl shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="text-xl font-bold text-blue-600">⚡</div>
+                <div>
+                  <div className="text-lg font-medium text-gray-800">
+                    {userProgress.totalXP}
+                  </div>
+                  <p className="text-sm text-gray-500">Total XP</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          {/* Author Contact Section */}
+          {/* Author Contact Section */}
+          <div className="bg-white p-4 rounded-xl shadow-md relative">
+            {/* Author Photo */}
+            <img
+              src="https://d16ho1g3lqitul.cloudfront.net/che's.jpg" // Replace with actual path
+              alt="Author"
+              className="absolute top-2 right-2 w-10 h-10 rounded-full object-cover border border-gray-200"
+            />
+
+            <h3 className="text-lg font-medium text-gray-800 mb-3">
+              Talk to the author!
+            </h3>
+            <p className="text-sm text-gray-600 mb-3">
+              If you want to appreciate, complain or just say "Hi!". Write to
+              Sochu's author.
+            </p>
+
+            <button
+              onClick={handleAuthorEmail}
+              className="w-full p-3 flex items-center justify-between hover:bg-green-50 transition-colors rounded-lg border border-gray-200"
+            >
+              <div className="flex items-center gap-3">
+                <MessageCircle size={20} className="text-green-500" />
+                <span className="text-green-500 font-medium">
+                  Message Author
+                </span>
+              </div>
+              <span className="text-gray-400">→</span>
+            </button>
+          </div>
+
+          {/* Support Section */}
+          {/* Support Section */}
+          <div className="bg-white p-4 rounded-xl shadow-md relative">
+            {/* Tech Manager Photo */}
+            <img
+              src="https://d16ho1g3lqitul.cloudfront.net/omm.jpg" // Replace with actual path
+              alt="Tech Manager"
+              className="absolute top-2 right-2 w-10 h-10 rounded-full object-cover border border-gray-200"
+            />
+
+            <h3 className="text-lg font-medium text-gray-800 mb-3">
+              Need help?
+            </h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Write to Sochu's technical support team.
+            </p>
+
+            <button
+              onClick={handleSupportEmail}
+              className="w-full p-3 flex items-center justify-between hover:bg-blue-50 transition-colors rounded-lg border border-gray-200"
+            >
+              <div className="flex items-center gap-3">
+                <HelpCircle size={20} className="text-blue-500" />
+                <span className="text-blue-500 font-medium">
+                  Contact Support
+                </span>
+              </div>
+              <span className="text-gray-400">→</span>
+            </button>
+          </div>
+
+          
+
+          {/* Account Settings */}
+          <div className="bg-white p-4 rounded-xl shadow-md">
+            <h3 className="text-lg font-medium text-gray-800 mb-3">
+              Account Settings
+            </h3>
+
+            {/* Delete Account Button */}
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full p-3 flex items-center justify-between hover:bg-red-50 transition-colors rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                <Trash2 size={20} className="text-red-500" />
+                <span className="text-red-500 font-medium">Delete Account</span>
+              </div>
+              <span className="text-gray-400">→</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Error message (if any) */}
+        {error && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-700 text-sm">
+              Note: Some profile data couldn't be loaded. Using available
+              information.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full">
+            <div className="flex items-center justify-center mb-4">
+              <AlertTriangle size={48} className="text-red-500" />
+            </div>
+
+            <h3 className="text-lg font-bold text-gray-800 text-center mb-2">
+              Delete Account
+            </h3>
+
+            <p className="text-gray-600 text-center mb-6">
+              Are you sure you want to permanently delete your account? This
+              action cannot be undone and will remove all your data, progress,
+              and settings.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteLoading}
+                className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading}
+                className="flex-1 py-3 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center"
+              >
+                {deleteLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  "Delete Forever"
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Achievement Badges */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-2 z-50"> 
-        <div className="flex justify-around items-center text-gray-600">
+      {/* Footer - Exact same as Leaderboard and Episodes */}
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-3 z-50"
+        style={{ boxShadow: "0 -1px 4px rgba(0, 0, 0, 0.05)" }}
+      >
+        <div className="flex justify-around items-center text-gray-600 pb-3">
           <button
-            onClick={() => handleFooterClick("learn")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3");
+              audio.play().catch(() => {});
+              handleFooterClick("learn");
+            }}
             className={`flex flex-col items-center ${
               selected === "broadcasts" ? "text-blue-600" : "text-gray-600"
             } transition-colors`}
@@ -302,11 +509,15 @@ const fetchUserProfile = async (userId) => {
               alt="Broadcast"
               className="h-14 w-14"
             />
-            <span className="text-xs">Home</span>
+            <span className="text-xs">Learn</span>
           </button>
 
           <button
-            onClick={() => handleFooterClick("leaderboard")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3");
+              audio.play().catch(() => {});
+              handleFooterClick("leaderboard");
+            }}
             className={`flex flex-col items-center ${
               selected === "leaderboard" ? "text-yellow-600" : "text-gray-600"
             } transition-colors`}
@@ -324,14 +535,18 @@ const fetchUserProfile = async (userId) => {
           </button>
 
           <button
-            onClick={() => handleFooterClick("broadcasts")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3");
+              audio.play().catch(() => {});
+              handleFooterClick("episodes");
+            }}
             className={`flex flex-col items-center ${
               selected === "entertainment" ? "text-green-600" : "text-gray-600"
             } transition-colors`}
           >
             <img
               src={
-                selected === "broadcasts"
+                selected === "episodes"
                   ? "/rajumenuselectednew.png"
                   : "/rajumenuunselectednew.png"
               }
@@ -342,7 +557,11 @@ const fetchUserProfile = async (userId) => {
           </button>
 
           <button
-            onClick={() => handleFooterClick("setting")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3");
+              audio.play().catch(() => {});
+              handleFooterClick("setting");
+            }}
             className={`flex flex-col items-center ${
               selected === "learn" ? "text-pink-600" : "text-gray-600"
             } transition-colors`}
@@ -356,7 +575,7 @@ const fetchUserProfile = async (userId) => {
               alt="setting"
               className="h-14 w-14"
             />
-            <span className="text-xs">Settings</span>
+            <span className="text-xs">Profile</span>
           </button>
         </div>
       </div>

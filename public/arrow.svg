@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 500 500">
+  <defs>
+    <linearGradient id="linear-gradient" x1="1547.21853" y1="-3631.66504" x2="1547.21853" y2="-3997.85637" gradientTransform="translate(-3236.52578 2398.32928) rotate(36.19158)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6d6e71"/>
+      <stop offset=".6" stop-color="#a7a9ac"/>
+      <stop offset="1" stop-color="#f1f2f2"/>
+    </linearGradient>
+  </defs>
+  <circle cx="251.81524" cy="312.25137" r="183.78329" style="fill: #fff;"/>
+  <path d="M314.5159,235.1414c-7.52152-5.61963-15.70179-9.90384-24.04311-13.1884l-23.92175-207.1298c-1.39983-12.64435-19.87962-12.87784-21.64262-.21647l-28.52013,206.57973c-18.94065,6.9273-36.18783,19.17273-48.9118,36.72086-34.37441,46.7974-24.19801,112.66579,22.76592,147.0394,46.96393,34.37361,112.66579,24.19801,147.0394-22.76592,34.37361-46.96393,24.19801-112.66579-22.76592-147.0394h0Z" style="fill: #fff; stroke: url(#linear-gradient); stroke-miterlimit: 10; stroke-width: 2.7px;"/>
+</svg>

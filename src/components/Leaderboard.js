@@ -26,48 +26,62 @@ const Leaderboard = () => {
   };
 
   return (
-    <div className="p-4 max-h-[75vh] overflow-y-auto bg-gray-100 ">
-      <div className="text-center mb-4">
-        <div className="flex flex-col items-center justify-center mb-2">
-          <img
-            src="/leaderboardv2.svg" // Replace with your medal icon
-            alt="Medal"
-            className="w-24 h-24"
-          />
-          <h2 className="text-2xl font-bold">Leaderboard</h2>
-          <p className="text-sm text-gray-500">See where you stand among other learners in the community.</p>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="p-4 bg-white">
+        <div className="text-center mb-4">
+          <div className="flex flex-col items-center justify-center mb-2">
+            <img
+              src="/leaderboardv2.svg" // Replace with your medal icon
+              alt="Medal"
+              className="w-24 h-24 pb-3"
+            />
+            <h2 className="text-2xl font-bold mb-2">Leaderboard</h2>
+            <p className="text-sm text-gray-500">
+              See where you stand among other learners in the community.
+            </p>
+          </div>
+          <hr className="border-gray-300 my-2" />
         </div>
-        <hr className="border-gray-300 my-2" />
-      </div>
 
-      {users.length === 0 ? (
-        <p className="text-center text-gray-500">No users yet</p>
-      ) : (
-        <div className="space-y-2">
-          {users.map((user, index) => (
-            <div
-              key={user.userId || index}
-              className="flex items-center justify-between bg-white p-4 rounded-xl shadow-md"
-            >
-              <div className="flex items-center gap-3">
-                <div className="text-xl font-bold text-blue-600">{index + 1}</div>
-                <div className="rounded-full bg-purple-500 w-10 h-10 flex items-center justify-center text-white text-lg font-semibold">
-                  {user.name ? user.name.charAt(0).toUpperCase() : "A"}
+        {users.length === 0 ? (
+          <p className="text-center text-gray-500">No users yet</p>
+        ) : (
+          <div className="space-y-2">
+            {users.map((user, index) => (
+              <div
+                key={user.userId || index}
+                className="flex items-center justify-between bg-white p-4 rounded-xl shadow-md"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-xl font-bold text-blue-600">
+                    {index + 1}
+                  </div>
+                  <div className="rounded-full bg-purple-500 w-10 h-10 flex items-center justify-center text-white text-lg font-semibold">
+                    {user.name ? user.name.charAt(0).toUpperCase() : "A"}
+                  </div>
+                  <div>
+                    <div className="text-lg font-medium">
+                      {user.name || "Anonymous"}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-lg font-medium">{user.name || "Anonymous"}</div>
+                <div className="text-xl font-bold text-gray-800">
+                  {user.xp} XP
                 </div>
               </div>
-              <div className="text-xl font-bold text-gray-800">{user.xp} XP</div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-6 z-50"> 
-        <div className="flex justify-around items-center text-gray-600">
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-2 pt-3 z-50" style={{ boxShadow: '0 -1px 4px rgba(0, 0, 0, 0.05)' }}>
+        <div className="flex justify-around items-center text-gray-600 pb-3">
           <button
-            onClick={() => handleFooterClick("learn")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Ensure this file exists in your public/sounds folder
+              audio.play();
+              handleFooterClick("learn");
+            }}
             className={`flex flex-col items-center ${
               selected === "broadcasts" ? "text-blue-600" : "text-gray-600"
             } transition-colors`}
@@ -81,11 +95,15 @@ const Leaderboard = () => {
               alt="Broadcast"
               className="h-14 w-14"
             />
-            <span className="text-xs">Home</span>
+            <span className="text-xs">Learn</span>
           </button>
 
           <button
-            onClick={() => handleFooterClick("leaderboard")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Make sure this file exists in /public/sounds
+              audio.play();
+              handleFooterClick("leaderboard");
+            }}
             className={`flex flex-col items-center ${
               selected === "leaderboard" ? "text-yellow-600" : "text-gray-600"
             } transition-colors`}
@@ -103,14 +121,18 @@ const Leaderboard = () => {
           </button>
 
           <button
-            onClick={() => handleFooterClick("broadcasts")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Make sure the file exists in public/sounds
+              audio.play();
+              handleFooterClick("episodes");
+            }}
             className={`flex flex-col items-center ${
               selected === "entertainment" ? "text-green-600" : "text-gray-600"
             } transition-colors`}
           >
             <img
               src={
-                selected === "broadcasts"
+                selected === "episodes"
                   ? "/rajumenuselectednew.png"
                   : "/rajumenuunselectednew.png"
               }
@@ -121,7 +143,11 @@ const Leaderboard = () => {
           </button>
 
           <button
-            onClick={() => handleFooterClick("setting")}
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Make sure this path is correct
+              audio.play();
+              handleFooterClick("setting");
+            }}
             className={`flex flex-col items-center ${
               selected === "learn" ? "text-pink-600" : "text-gray-600"
             } transition-colors`}
@@ -135,7 +161,7 @@ const Leaderboard = () => {
               alt="Learn"
               className="h-14 w-14"
             />
-            <span className="text-xs">Settings</span>
+            <span className="text-xs">Profile</span>
           </button>
         </div>
       </div>
