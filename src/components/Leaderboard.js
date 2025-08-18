@@ -144,6 +144,28 @@ const Leaderboard = () => {
 
           <button
             onClick={() => {
+              const audio = new Audio("/sounds/click.mp3"); // Make sure the file exists in public/sounds
+              audio.play();
+              handleFooterClick("bedtime-stories");
+            }}
+            className={`flex flex-col items-center ${
+              selected === "entertainment" ? "text-green-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "bedtime"
+                  ? "/robermenuselected.png"
+                  : "/robertmenuunselected.png"
+              }
+              alt="Entertainment"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Bedtime</span>
+          </button>
+
+          <button
+            onClick={() => {
               const audio = new Audio("/sounds/click.mp3"); // Make sure this path is correct
               audio.play();
               handleFooterClick("setting");

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import {
@@ -26,8 +26,77 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
   const [correctStreak, setCorrectStreak] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(true);
 
-  // const [showStreakPopup, setShowStreakPopup] = useState(false);
+  // 🔧 Audio Management - Use refs to track all audio instances
+  const activeAudioRef = useRef(null);
+  const allAudioInstancesRef = useRef(new Set());
 
+  // 🛑 CRITICAL: Stop all audio function
+  const stopAllAudio = () => {
+    // Stop the main question audio
+    if (audioInstance) {
+      audioInstance.pause();
+      audioInstance.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+
+    // Stop active audio ref
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current.currentTime = 0;
+      activeAudioRef.current = null;
+    }
+
+    // Stop all tracked audio instances
+    allAudioInstancesRef.current.forEach((audio) => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (error) {
+        console.warn("Error stopping audio:", error);
+      }
+    });
+    allAudioInstancesRef.current.clear();
+  };
+
+  // 🧹 Helper function to play audio safely with tracking
+  const playAudioSafely = (audioSrc, onPlay = null, onEnd = null) => {
+    // Stop any currently playing audio first
+    stopAllAudio();
+
+    const audio = new Audio(audioSrc);
+    
+    // Track this audio instance
+    allAudioInstancesRef.current.add(audio);
+    activeAudioRef.current = audio;
+
+    // Set up event listeners
+    audio.addEventListener('ended', () => {
+      allAudioInstancesRef.current.delete(audio);
+      if (activeAudioRef.current === audio) {
+        activeAudioRef.current = null;
+      }
+      if (onEnd) onEnd();
+    });
+
+    audio.addEventListener('error', (e) => {
+      console.warn('Audio playback error:', e);
+      allAudioInstancesRef.current.delete(audio);
+    });
+
+    // Play the audio
+    audio.play()
+      .then(() => {
+        if (onPlay) onPlay();
+      })
+      .catch((err) => {
+        console.warn("Audio playback failed:", err);
+        allAudioInstancesRef.current.delete(audio);
+      });
+
+    return audio;
+  };
+
+  // Reset state when question changes - DON'T STOP AUDIO HERE
   useEffect(() => {
     setSelectedOption(null);
     setCustomInput("");
@@ -50,38 +119,45 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
       });
   }, [user, seriesSlug]);
 
+  // 🔊 SIMPLE AUDIO AUTO-PLAY - BACK TO BASICS
   useEffect(() => {
     if (question.audio) {
-      const audio = new Audio(question.audio);
-      setAudioInstance(audio);
-
-      if (audioEnabled) {
-        audio.play().catch((err) => console.warn("Auto play failed:", err));
-        setIsAudioPlaying(true);
+      // Stop any existing audio first
+      if (audioInstance) {
+        audioInstance.pause();
+        audioInstance.currentTime = 0;
       }
 
-      // Cleanup on unmount
+      const audio = new Audio(question.audio);
+      setAudioInstance(audio);
+      
+      // JUST PLAY IT - NO COMPLEX LOGIC
+      audio.play()
+        .then(() => {
+          setIsAudioPlaying(true);
+        })
+        .catch((err) => {
+          console.warn("Audio autoplay failed:", err);
+        });
+
+      audio.addEventListener('ended', () => {
+        setIsAudioPlaying(false);
+      });
+
+      // Cleanup
       return () => {
         audio.pause();
         audio.currentTime = 0;
       };
     }
-  }, [question.audio, audioEnabled]);
+  }, [question]);
 
-  // useEffect(() => {
-  //   if (showStreakPopup) {
-  //     const clapSound = new Audio("/sounds/trump.mp3");
-  //     clapSound.play().catch((err) => {
-  //       console.warn("Clap sound failed:", err.message);
-  //     });
-
-  //     const timeout = setTimeout(() => {
-  //       setShowStreakPopup(false);
-  //     }, 3000);
-
-  //     return () => clearTimeout(timeout);
-  //   }
-  // }, [showStreakPopup]);
+  // 🧹 Component unmount cleanup
+  useEffect(() => {
+    return () => {
+      stopAllAudio();
+    };
+  }, []);
 
   const progressPercentage = Math.round(
     ((currentQuestionIndex + 1) / totalQuestions) * 100
@@ -92,10 +168,16 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
       setSelectedOption(opt.text);
       setCustomInput("");
 
-      if (audioEnabled && opt.audio) {
-        const audio = new Audio(opt.audio);
-        audio.play().catch((err) => {
-          console.warn("Autoplay blocked:", err.message);
+      // Play option audio if available - STOP OTHER AUDIO FIRST
+      if (opt.audio) {
+        if (audioInstance) {
+          audioInstance.pause();
+          setIsAudioPlaying(false);
+        }
+        
+        const optionAudio = new Audio(opt.audio);
+        optionAudio.play().catch((err) => {
+          console.warn("Option audio failed:", err.message);
         });
       }
     }
@@ -103,6 +185,13 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
 
   const handleSubmit = async () => {
     if (!user) return;
+    
+    // 🛑 Stop all audio when user submits
+    if (audioInstance) {
+      audioInstance.pause();
+      setIsAudioPlaying(false);
+    }
+
     const trimmedInput = customInput.trim();
     const userAnswer = trimmedInput || selectedOption;
 
@@ -130,31 +219,15 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
       setIsCorrect(true);
       setSubmitted(true);
 
-      // 🎵 Play success audio for correct answer
-      const successAudio = new Audio("/sounds/correct.wav");
-      successAudio.play().catch((err) => {
-        console.warn("Success audio playback failed:", err.message);
-      });
-
-      // setCorrectStreak((prev) => {
-      //   const newStreak = prev + 1;
-      //   if (newStreak === 3) {
-      //     setShowStreakPopup(true);
-      //     setTimeout(() => setShowStreakPopup(false), 3000);
-      //     return 0;
-      //   }
-      //   return newStreak;
-      // });
+      // 🎵 Play success audio with proper management
+      playAudioSafely("/sounds/correct.wav");
     } else {
       setFeedback("Wrong! Please try again.");
       setIsCorrect(false);
       setSubmitted(true);
 
-      // 🎵 Play error audio for wrong answer
-      const errorAudio = new Audio("/sounds/error.wav");
-      errorAudio.play().catch((err) => {
-        console.warn("Error audio playback failed:", err.message);
-      });
+      // 🎵 Play error audio with proper management
+      playAudioSafely("/sounds/error.wav");
 
       const newHearts = Math.max(0, hearts - 1);
       setHearts(newHearts);
@@ -180,6 +253,8 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
 
         // 🧘 Navigate to breathing page if hearts exhausted
         if ((updated.hearts ?? 0) <= 0) {
+          // 🛑 Stop all audio before navigation
+          stopAllAudio();
           navigate("/breathe");
           return;
         }
@@ -191,6 +266,9 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
   };
 
   const handleRetry = () => {
+    // 🛑 Stop all audio on retry
+    stopAllAudio();
+    
     setSubmitted(false);
     setSelectedOption(null);
     setCustomInput("");
@@ -199,22 +277,45 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
   };
 
   const handleClose = () => {
-    navigate(-1); // Navigate to the previous page
+    // 🛑 CRITICAL: Stop all audio before navigation
+    stopAllAudio();
+    navigate(-1);
   };
 
+  const handleNext = () => {
+    // 🛑 CRITICAL: Stop all audio before moving to next question
+    stopAllAudio();
+    onNext();
+  };
+
+  // Auto-advance logic with proper audio cleanup
   useEffect(() => {
     if (submitted) {
       const timer = setTimeout(() => {
         if (isCorrect) {
-          onNext(); // Move to the next question
+          handleNext(); // Use our audio-safe next function
         } else {
-          handleRetry(); // Reset for retry
+          handleRetry(); // Use our audio-safe retry function
         }
-      }, 1000); // 1 second
+      }, 1000);
 
       return () => clearTimeout(timer);
     }
   }, [submitted, isCorrect]);
+
+  // 🔊 Handle speaker button - BACK TO ORIGINAL SIMPLE LOGIC
+  const handleSpeakerToggle = () => {
+    if (audioInstance) {
+      if (isAudioPlaying) {
+        audioInstance.pause();
+        setIsAudioPlaying(false);
+      } else {
+        audioInstance.play()
+          .then(() => setIsAudioPlaying(true))
+          .catch((err) => console.warn("Manual play error:", err));
+      }
+    }
+  };
 
   if (!question || !question.options) {
     return (
@@ -231,9 +332,9 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
       <div className="absolute top-4 left-4 z-20">
         <button
           onClick={() => {
-            const audio = new Audio("/sounds/click.mp3");
-            audio.play();
-            handleClose();
+            // 🛑 Stop all audio before playing click sound and navigating
+            stopAllAudio();
+            playAudioSafely("/sounds/click.mp3", null, () => handleClose());
           }}
           className="w-10 h-10 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
         >
@@ -241,27 +342,12 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
         </button>
       </div>
 
-      {/* 🔊 Speaker Button - Top Right */}
+      {/* 🔊 Speaker Button - BACK TO YOUR ORIGINAL DESIGN */}
       {question.audio && (
         <div className="absolute top-4 right-4 z-20">
           <button
-            onClick={() => {
-              if (audioInstance) {
-                if (isAudioPlaying) {
-                  audioInstance.pause();
-                  setIsAudioPlaying(false);
-                } else {
-                  audioInstance
-                    .play()
-                    .catch((err) => console.warn("Manual play error:", err));
-                  setIsAudioPlaying(true);
-                }
-              }
-              setAudioEnabled(!audioEnabled); // toggle user preference
-            }}
-            className={`w-10 h-10 hover:bg-white rounded-full flex items-center justify-center transition-colors ${
-              isAudioPlaying ? "bg-white" : "bg-white"
-            }`}
+            onClick={handleSpeakerToggle}
+            className="w-10 h-10 hover:bg-white rounded-full flex items-center justify-center transition-colors bg-white"
           >
             {isAudioPlaying ? (
               <Volume2 size={24} className="text-gray-700" />
@@ -281,7 +367,7 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
-          <div className="flex items-center gap-1 bg-white rounded-full px-3 py-2  ">
+          <div className="flex items-center gap-1 bg-white rounded-full px-3 py-2">
             <Heart size={20} className="text-red-500 fill-red-500" />
             <span className="text-red-500 font-bold">{hearts}</span>
           </div>
@@ -334,9 +420,9 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
           {!submitted && (
             <button
               onClick={() => {
-                const audio = new Audio("/sounds/click.mp3"); // ✅ Ensure this path exists in public folder
-                audio.play();
-                handleSubmit();
+                // 🛑 Stop all audio before playing click sound and submitting
+                stopAllAudio();
+                playAudioSafely("/sounds/click.mp3", null, () => handleSubmit());
               }}
               disabled={!selectedOption && !customInput}
               className="w-[100%] py-3 sm:py-4 bg-green-500 hover:border-green-600 text-white font-bold rounded-lg 
@@ -362,18 +448,6 @@ const MCQ = ({ question, onNext, totalQuestions, currentQuestionIndex }) => {
           </div>
         </div>
       )}
-      {/* {showStreakPopup && (
-        <div className="fixed inset-0 bg-white z-[9999] flex flex-col items-center justify-center p-4 transition-all duration-300">
-          <img
-            src="/raju.gif" // ✅ Update path if needed
-            alt="Streak Animation"
-            className="w-64 sm:w-72 md:w-80 h-auto object-contain mb-6"
-          />
-          <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-800">
-            🎉 3 in a row! You're on fire 🔥
-          </h2>
-        </div>
-      )} */}
     </div>
   );
 };

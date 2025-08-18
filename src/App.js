@@ -26,6 +26,8 @@ import Wheel from "./components/Trying";
 import Trying from "./components/Trying";
 import PlanningsPage from "./components/PlanningsPage ";
 import EpisodesComponent from "./components/EpisodesComponent";
+import BedtimeStories from "./components/BedtimeStories ";
+import StoryPlayer from "./components/StoryPlayer";
 
 // SSO Callback Component for Apple Sign In
 const SSOCallback = () => {
@@ -145,7 +147,6 @@ function App() {
             </>
           }
         />
-        
 
         {/* Protected Emotion Radar Page */}
         <Route
@@ -268,7 +269,7 @@ function App() {
           element={
             <>
               <SignedIn>
-                <PlanningsPage  />
+                <PlanningsPage />
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />
@@ -282,6 +283,33 @@ function App() {
             <>
               <SignedIn>
                 <EpisodesComponent />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+        <Route
+          path="/bedtime-stories"
+          element={
+            <>
+              <SignedIn>
+                <BedtimeStories />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/bedtime-story/:storyId"
+          element={
+            <>
+              <SignedIn>
+                <StoryPlayer />
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />

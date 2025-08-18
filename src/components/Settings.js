@@ -560,6 +560,28 @@ const Setting = () => {
             onClick={() => {
               const audio = new Audio("/sounds/click.mp3");
               audio.play().catch(() => {});
+              handleFooterClick("bedtime-stories");
+            }}
+            className={`flex flex-col items-center ${
+              selected === "bedtime" ? "text-green-600" : "text-gray-600"
+            } transition-colors`}
+          >
+            <img
+              src={
+                selected === "bedtime"
+                  ? "/robermenuselected.png"
+                  : "/robertmenuunselected.png "
+              }
+              alt="Bedtime"
+              className="h-14 w-14"
+            />
+            <span className="text-xs">Bedtime</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const audio = new Audio("/sounds/click.mp3");
+              audio.play().catch(() => {});
               handleFooterClick("setting");
             }}
             className={`flex flex-col items-center ${
